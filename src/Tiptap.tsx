@@ -60,6 +60,9 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
       Text,
       Bold,
       Heading,
+      Collaboration.configure({
+        document: ydoc,
+      }),
       CollaborationAnnotation.configure({
         document: ydoc,
         onUpdate: (items: any) => {
@@ -69,22 +72,8 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
         instance,
         color,
       }),
-      Collaboration.configure({
-        document: ydoc,
-      }),
     ],
-    content: `        <p>
-    Annotations can be used to add additional information to the content, for example comments. They live on a different level than the actual editor content.
-  </p>
-  <p/>
-  <p>
-    This example allows you to add plain text, but you’re free to add more complex data, for example JSON from another tiptap instance. :-)
-  </p>
-  <p/>
-  <p>
-    Lorem Ipsum 123 hey buddy
-  </p>
-  <p/><p/><p/>`,
+    content: `<p>1</p><p>2</p>`,
   });
 
   if (!window["editor"]) {

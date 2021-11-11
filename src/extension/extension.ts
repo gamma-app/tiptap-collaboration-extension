@@ -1,8 +1,12 @@
+/* eslint-disable @typescript-eslint/consistent-type-assertions */
 import * as Y from "yjs";
 import { Extension } from "@tiptap/core";
 import { findParentNodeClosestToPos } from "prosemirror-utils";
 
-import { AnnotationPlugin, AnnotationPluginKey } from "./AnnotationPlugin";
+import {
+  createAnnotationPlugin,
+  AnnotationPluginKey,
+} from "./AnnotationPlugin";
 
 export interface AddAnnotationAction {
   type: "addAnnotation";
@@ -23,34 +27,22 @@ export interface DeleteAnnotationAction {
 }
 
 export interface AnnotationOptions {
-  HTMLAttributes: {
-    [key: string]: any;
-  };
   /**
    * An event listener which receives annotations for the current selection.
    */
-  onUpdate: (items: [any?]) => void;
+  onUpdate: (items: any[]) => void;
   /**
    * An initialized Y.js document.
    */
-  document: Y.Doc | null;
-  /**
-   * Name of a Y.js map, can be changed to sync multiple fields with one Y.js document.
-   */
-  field: string;
+  document: Y.Doc;
   /**
    * A raw Y.js map, can be used instead of `document` and `field`.
    */
   map: Y.Map<any> | null;
+
   instance: string;
 
   color: string;
-}
-
-function getMapFromOptions(options: AnnotationOptions): Y.Map<any> {
-  return options.map
-    ? options.map
-    : (options.document?.getMap(options.field) as Y.Map<any>);
 }
 
 declare module "@tiptap/core" {
@@ -63,27 +55,22 @@ declare module "@tiptap/core" {
   }
 }
 
+const getMap = (doc: any) => doc.getMap("annotations") as Y.Map<any>;
+
 export const CollaborationAnnotation = Extension.create({
   name: "annotation",
 
-  priority: 1000,
-
-  defaultOptions: <AnnotationOptions>{
-    HTMLAttributes: {
-      class: "annotation",
-    },
+  defaultOptions: {
     onUpdate: (decorations) => decorations,
     document: null,
     field: "annotations",
     map: null,
     instance: "",
     color: "green",
-  },
+  } as AnnotationOptions,
 
   onCreate() {
-    const map = getMapFromOptions(this.options);
-
-    map.observe(() => {
+    getMap(this.options.document).observe(() => {
       console.log(
         `%c [${this.options.instance}] map.observe updated  → createDecorations`,
         `color: ${this.options.color}`
@@ -153,10 +140,9 @@ export const CollaborationAnnotation = Extension.create({
 
   addProseMirrorPlugins() {
     return [
-      AnnotationPlugin({
-        HTMLAttributes: this.options.HTMLAttributes,
+      createAnnotationPlugin({
         onUpdate: this.options.onUpdate,
-        map: getMapFromOptions(this.options),
+        map: getMap(this.options.document),
         instance: this.options.instance,
         color: this.options.color,
       }),

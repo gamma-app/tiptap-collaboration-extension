@@ -5,29 +5,26 @@ import { AnnotationState } from "./AnnotationState";
 export const AnnotationPluginKey = new PluginKey("annotation");
 
 export interface AnnotationPluginOptions {
-  HTMLAttributes: {
-    [key: string]: any;
-  };
-  onUpdate: (items: [any?]) => void;
+  onUpdate: (items: any[]) => void;
   map: Y.Map<any>;
   instance: string;
   color: string;
 }
 
-export const AnnotationPlugin = (options: AnnotationPluginOptions) =>
+export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
   new Plugin({
     key: AnnotationPluginKey,
     state: {
       init() {
         return new AnnotationState({
-          HTMLAttributes: options.HTMLAttributes,
           map: options.map,
           instance: options.instance,
           color: options.color,
         });
       },
-      apply(transaction, pluginState, oldState, newState) {
-        return pluginState.apply(transaction, newState);
+
+      apply(transaction, pluginState, oldEditorState, newEditorState) {
+        return pluginState.apply(transaction, newEditorState);
       },
     },
 

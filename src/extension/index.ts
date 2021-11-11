@@ -1,5 +1,5 @@
-import { CollaborationAnnotation } from "./collaboration-annotation";
+import { CollaborationAnnotation } from "./extension";
 
-export * from "./collaboration-annotation";
+export * from "./extension";
 
 export default CollaborationAnnotation;

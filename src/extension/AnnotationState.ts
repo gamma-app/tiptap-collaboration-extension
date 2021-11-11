@@ -5,20 +5,17 @@ import { Decoration, DecorationSet } from "prosemirror-view";
 import {
   ySyncPluginKey,
   relativePositionToAbsolutePosition,
-  absolutePositionToRelativePosition
+  absolutePositionToRelativePosition,
 } from "y-prosemirror";
 import {
   AddAnnotationAction,
   DeleteAnnotationAction,
-  UpdateAnnotationAction
-} from "./collaboration-annotation";
+  UpdateAnnotationAction,
+} from "./extension";
 import { AnnotationPluginKey } from "./AnnotationPlugin";
 import { AnnotationItem } from "./AnnotationItem";
 
 export interface AnnotationStateOptions {
-  HTMLAttributes: {
-    [key: string]: any;
-  };
   map: Y.Map<any>;
   instance: string;
   color: string;
@@ -66,7 +63,7 @@ export class AnnotationState {
     const randomId = this.randomId();
     map.set(randomId, {
       from: absoluteFrom,
-      data
+      data,
     });
   }
 
@@ -81,7 +78,7 @@ export class AnnotationState {
 
     map.set(action.id, {
       from: annotation.from,
-      data: action.data
+      data: action.data,
     });
   }
 
@@ -102,7 +99,7 @@ export class AnnotationState {
       `%c [${this.options.instance}] calling create decorations`,
       `color: ${this.color}`
     );
-    const { map, HTMLAttributes } = this.options;
+    const { map } = this.options;
     const ystate = ySyncPluginKey.getState(state);
     const { doc, type, binding } = ystate;
     const decorations: Decoration[] = [];
@@ -126,7 +123,6 @@ export class AnnotationState {
         `%c [${this.options.instance}] Decoration.widget()`,
         `color: ${this.color}`,
         from,
-        HTMLAttributes,
         { key, data: annotation.data }
       );
 
@@ -149,7 +145,7 @@ export class AnnotationState {
             side: -1,
             destroy(node) {
               console.log("DESTROYED!", node);
-            }
+            },
           }
         )
       );
@@ -218,7 +214,7 @@ export class AnnotationState {
       {
         onRemove: (d) => {
           console.log("onRemove", d);
-        }
+        },
       }
     );
 
@@ -234,7 +230,7 @@ export class AnnotationState {
             console.log(
               `%c [${this.options.instance}] split at start:, ${{
                 splitFrom,
-                offset
+                offset,
               }}`,
               `color: ${this.color}`
             );
