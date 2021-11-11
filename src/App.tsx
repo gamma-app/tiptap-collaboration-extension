@@ -1,26 +1,24 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import "./styles.css";
+import { Tiptap } from "./Tiptap";
+import * as Y from "yjs";
 
-function App() {
+export default function App() {
+  const ydoc = new Y.Doc();
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <h3>editor1</h3>
+      <Tiptap
+        ydoc={ydoc}
+        instance={"editor1"}
+        devTools={true}
+        color="magenta"
+      />
+
+      <br />
+      <br />
+
+      <h3>editor2 </h3>
+      <Tiptap ydoc={ydoc} instance={"editor2"} color="cornflowerblue" />
     </div>
   );
 }
-
-export default App;

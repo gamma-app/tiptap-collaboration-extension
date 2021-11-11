@@ -1,0 +1,30 @@
+.App {
+  font-family: sans-serif;
+  text-align: left;
+  margin-right: 6em;
+}
+
+.ProseMirror {
+  padding: 5px 10px;
+  font-family: courier;
+  outline: solid 2px #2f83f9;
+  border-radius: 2px;
+}
+
+p {
+  position: relative;
+}
+
+.annotation {
+  background: #9def8f;
+}
+
+span.widget {
+  background: #9def8f;
+  position: absolute;
+  right: -70px;
+  top: 0px;
+  border-radius: 5px;
+  padding: 2px 3px;
+  user-select: none;
+}
