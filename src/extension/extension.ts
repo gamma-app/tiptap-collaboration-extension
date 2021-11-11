@@ -70,10 +70,11 @@ export const CollaborationAnnotation = Extension.create({
   } as AnnotationOptions,
 
   onCreate() {
-    getMap(this.options.document).observe(() => {
+    getMap(this.options.document).observe((ev) => {
       console.log(
         `%c [${this.options.instance}] map.observe updated  → createDecorations`,
-        `color: ${this.options.color}`
+        `color: ${this.options.color}`,
+        { ev }
       );
 
       const transaction = this.editor.state.tr.setMeta(AnnotationPluginKey, {

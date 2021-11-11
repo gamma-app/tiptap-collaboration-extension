@@ -1,6 +1,7 @@
 import * as Y from "yjs";
 import { Plugin, PluginKey } from "prosemirror-state";
 import { AnnotationState } from "./AnnotationState";
+import { AnnotationItem } from "./AnnotationItem";
 
 export const AnnotationPluginKey = new PluginKey("annotation");
 
@@ -37,9 +38,9 @@ export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
           return decorations;
         }
 
-        const annotations = this.getState(state).annotationsAt(selection.from);
+        // const annotations = this.getState(state).annotationsAt(selection.from);
 
-        options.onUpdate(annotations);
+        options.onUpdate(decorations.find().map((d) => new AnnotationItem(d)));
 
         return decorations;
       },

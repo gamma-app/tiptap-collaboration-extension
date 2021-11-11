@@ -1,6 +1,6 @@
 import * as Y from "yjs";
 import { EditorState, Transaction } from "prosemirror-state";
-import { Mapping, StepMap } from "prosemirror-transform";
+import { Mapping, StepMap, Transform } from "prosemirror-transform";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import {
   ySyncPluginKey,
@@ -14,6 +14,7 @@ import {
 } from "./extension";
 import { AnnotationPluginKey } from "./AnnotationPlugin";
 import { AnnotationItem } from "./AnnotationItem";
+import { Content } from "@tiptap/core";
 
 export interface AnnotationStateOptions {
   map: Y.Map<any>;
@@ -29,6 +30,8 @@ export class AnnotationState {
   color: string;
 
   domNodeMap: any = {};
+
+  localAnnotations: { [key: string]: { pos: number } } = {};
 
   constructor(options: AnnotationStateOptions) {
     this.options = options;
@@ -94,18 +97,15 @@ export class AnnotationState {
     });
   }
 
-  createDecorations(state: EditorState, debug = false) {
-    console.log(
-      `%c [${this.options.instance}] calling create decorations`,
-      `color: ${this.color}`
-    );
+  createDecorations(state: EditorState, remoteUpdate = false) {
+    // console.log(
+    //   `%c [${this.options.instance}] calling create decorations`,
+    //   `color: ${this.color}`
+    // );
     const { map } = this.options;
     const ystate = ySyncPluginKey.getState(state);
     const { doc, type, binding } = ystate;
     const decorations: Decoration[] = [];
-    if (debug) {
-      console.log("debug from other editor", type, binding);
-    }
 
     map.forEach((annotation, key) => {
       const from = relativePositionToAbsolutePosition(
@@ -123,13 +123,17 @@ export class AnnotationState {
         `%c [${this.options.instance}] Decoration.widget()`,
         `color: ${this.color}`,
         from,
-        { key, data: annotation.data }
+        { key, doc, from: annotation.from, data: annotation.data }
       );
 
       if (!this.domNodeMap[key]) {
         const el = document.createElement("span");
         el.classList.add("widget", "widget-" + key);
         this.domNodeMap[key] = el;
+      }
+
+      if (!remoteUpdate) {
+        this.localAnnotations[key] = { pos: from };
       }
 
       decorations.push(
@@ -144,7 +148,7 @@ export class AnnotationState {
             key,
             side: -1,
             destroy(node) {
-              console.log("DESTROYED!", node);
+              // console.log("DESTROYED!", node);
             },
           }
         )
@@ -152,9 +156,10 @@ export class AnnotationState {
     });
 
     this.decorations = DecorationSet.create(state.doc, decorations);
+    return this;
   }
 
-  apply(transaction: Transaction, state: EditorState) {
+  apply(transaction: Transaction, state: EditorState, oldState: EditorState) {
     // Add/Remove annotations
     const action = transaction.getMeta(AnnotationPluginKey) as
       | AddAnnotationAction
@@ -199,63 +204,72 @@ export class AnnotationState {
       this.createDecorations(state, true);
 
       return this;
+    } else {
+      this.decorations = this.decorations.map(
+        transaction.mapping,
+        transaction.doc
+      );
     }
-
-    // LOCAL CHANGE
-    //Use ProseMirror to update positions
-    console.log(
-      `%c [${this.options.instance}] isChangeOrigin: false → ProseMirror mapping`,
-      `color: ${this.color}`
-    );
-
-    this.decorations = this.decorations.map(
-      transaction.mapping,
-      transaction.doc,
-      {
-        onRemove: (d) => {
-          console.log("onRemove", d);
-        },
-      }
-    );
+    return this;
 
     const splitBlockAtStart = transaction.getMeta("SPLIT_BLOCK_START");
-    this.options.map.doc?.transact(() => {
-      this.decorations.find().forEach((deco) => {
-        const { from: currentFrom } = deco;
-        let finalFrom = currentFrom;
+    if (splitBlockAtStart) {
+      this.options.map.doc?.transact(() => {
+        console.log("TRANSACT");
+        this.decorations.find().forEach((deco) => {
+          const { from: currentFrom } = deco;
+          let finalFrom = currentFrom;
 
-        if (splitBlockAtStart) {
-          const { from: splitFrom, offset } = splitBlockAtStart;
-          if (splitFrom === currentFrom) {
-            console.log(
-              `%c [${this.options.instance}] split at start:, ${{
-                splitFrom,
-                offset,
-              }}`,
-              `color: ${this.color}`
-            );
+          if (splitBlockAtStart) {
+            const { from: splitFrom, offset } = splitBlockAtStart;
+            if (splitFrom === currentFrom) {
+              console.log(
+                `%c [${this.options.instance}] split at start:, ${{
+                  splitFrom,
+                  offset,
+                }}`,
+                `color: ${this.color}`
+              );
 
-            finalFrom = currentFrom + offset;
+              finalFrom = currentFrom + offset;
+            }
           }
-        }
 
-        const newFrom = absolutePositionToRelativePosition(
-          finalFrom,
-          ystate.type,
-          ystate.binding.mapping
-        );
+          const newFrom = absolutePositionToRelativePosition(
+            finalFrom,
+            ystate.type,
+            ystate.binding.mapping
+          );
 
-        const { key } = deco.spec;
-        const annotation = this.options.map.get(key);
+          const { key } = deco.spec;
+          const annotation = this.options.map.get(key);
 
-        annotation.from = newFrom;
+          annotation.from = newFrom;
 
-        this.options.map.set(key, annotation);
+          this.options.map.set(key, annotation);
+        });
       });
-    }, AnnotationPluginKey);
-
-    this.createDecorations(state);
-
+    } else {
+      // LOCAL CHANGE
+      // Use ProseMirror to update positions
+      console.log(
+        `[${this.options.instance}] isChangeOrigin: false → ProseMirror mapping`
+      );
+      this.createDecorations(state);
+      console.log("transload meta", transaction.getMeta("RELOAD"));
+      if (transaction.getMeta("RELOAD")) {
+        setTimeout(() => {
+          console.log("reloading");
+          const tr = state.tr.insert(1, []);
+          tr.setMeta("RELOAD", true);
+          state.apply(tr);
+        });
+      }
+      // this.decorations = this.decorations.map(
+      //   transaction.mapping,
+      //   transaction.doc
+      // );
+    }
     return this;
   }
 }
