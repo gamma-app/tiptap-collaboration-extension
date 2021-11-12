@@ -94,6 +94,7 @@ export const CollaborationAnnotation = Extension.create({
             this.editor.state.doc.resolve(selection.from),
             (node) => node.type.isBlock
           );
+          console.log("finding block parent", blockParent);
 
           if (!blockParent) {
             return false;

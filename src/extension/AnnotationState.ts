@@ -118,20 +118,13 @@ export class AnnotationState {
         { key, doc, annotation }
       );
 
-      // if (!this.domNodeMap[key]) {
-      //   const el = document.createElement("span");
-      //   el.classList.add("widget", "widget-" + key);
-      //   this.domNodeMap[key] = el;
-      // }
       const node = state.doc.resolve(pos);
-      // console.log("jordan parent", node);
 
       decorations.push(
         Decoration.node(
-          // position was saved as a `pos` of parent block node, add 1 to convert it the `parent.from`
-          // this allows text to be written before the node
           pos,
           pos + node.nodeAfter?.nodeSize || 0,
+          // attrs
           {},
           {
             data: annotation.data,
@@ -139,18 +132,6 @@ export class AnnotationState {
               console.log("DESTROYED!", node);
             },
           }
-          // () => {
-          //   const node = this.domNodeMap[key];
-          //   // node.innerHTML = annotation.data;
-          //   return node;
-          // },
-          // {
-          //   key,
-          //   side: -1,
-          //   destroy(node) {
-          //     // console.log("DESTROYED!", node);
-          //   },
-          // }
         )
       );
     });
@@ -233,6 +214,7 @@ export class AnnotationState {
         splitBlockAtStart.from,
         splitBlockAtStart.from
       );
+      console.log("jordan found decos", decos);
       if (decos.length > 0) {
         // split inbetween the decoration
         // recreate from YMap

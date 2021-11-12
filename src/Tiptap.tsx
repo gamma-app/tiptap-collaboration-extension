@@ -140,7 +140,7 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
         color,
       }),
     ],
-    content: `<p>block 1</p><p>block 2</p>`,
+    content: `<h1>h</h1><p>block 1</p><p>block 2</p><p>block 3</p>`,
   });
 
   if (!window["editor"]) {

@@ -12,7 +12,9 @@ export const ParagraphView = (nodeViewProps: NodeViewProps) => {
   return (
     <NodeViewWrapper style={{ position: "relative" }}>
       {decorations.map((d) => (
-        <span className="widget">{d.spec.data}</span>
+        <span className="widget" tabIndex={8999}>
+          {d.spec.data}
+        </span>
       ))}
       <NodeViewContent as="p" />
     </NodeViewWrapper>
