@@ -25,17 +25,31 @@ export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
       },
 
       apply(transaction, pluginState, oldEditorState, newEditorState) {
+        console.log(`${options.instance} applying transaction`);
         return pluginState.apply(transaction, newEditorState);
       },
     },
+
+    // appendTransaction(transactions, old, state) {
+    //   console.log(`${options.instance} applying transaction`, transactions);
+    //   const hasSplitBlock = transactions.find((transaction) =>
+    //     transaction.getMeta("SPLIT_BLOCK_START")
+    //   );
+    //   if (hasSplitBlock) {
+    //     console.log("adding another back");
+    //     return state.tr.setMeta(AnnotationPluginKey, {
+    //       type: "createDecorations",
+    //     });
+    //   }
+    // },
 
     props: {
       decorations(state) {
         const { decorations } = this.getState(state);
 
+        console.log("deco props", decorations.find());
         options.onUpdate(decorations.find().map((d) => new AnnotationItem(d)));
 
-        // console.log("decorations", decorations);
         return decorations;
       },
     },

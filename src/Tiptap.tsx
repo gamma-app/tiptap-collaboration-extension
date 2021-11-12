@@ -9,7 +9,7 @@ import Heading from "@tiptap/extension-heading";
 // @ts-ignore
 import applyDevTools from "prosemirror-dev-tools";
 import CollaborationAnnotation from "./extension";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { findChildren } from "prosemirror-utils";
 
 export const KeymapOverride = Extension.create({
@@ -155,17 +155,30 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
           marginLeft: "70px",
         }}
       >
-        <button
-          style={{
-            marginTop: "15px",
-          }}
-          onClick={() => {
-            const comment = "c #" + Math.floor(Math.random() * 100);
-            editor?.commands.addAnnotation(comment);
-          }}
-        >
-          Comment
-        </button>
+        <div style={{ display: "flex", flexDirection: "row" }}>
+          <button
+            style={{
+              marginTop: "15px",
+            }}
+            onClick={() => {
+              const comment = "c #" + Math.floor(Math.random() * 100);
+              editor?.commands.addAnnotation(comment);
+            }}
+          >
+            Comment
+          </button>
+          <button
+            style={{
+              marginTop: "15px",
+            }}
+            onClick={() => {
+              editor?.commands.refreshDecorations();
+            }}
+          >
+            Refresh
+          </button>
+        </div>
+
         {comments.map((c, idx) => {
           return <div key={idx}>{JSON.stringify(c)}</div>;
         })}

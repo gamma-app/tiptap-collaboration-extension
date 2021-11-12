@@ -4,8 +4,8 @@
   "private": true,
   "dependencies": {
     "@babel/plugin-proposal-optional-chaining": "7.14.5",
-    "@testing-library/jest-dom": "^5.11.4",
-    "@testing-library/react": "^11.1.0",
+    "@testing-library/jest-dom": "^5.15.0",
+    "@testing-library/react": "^12.1.2",
     "@testing-library/user-event": "^12.1.10",
     "@tiptap/core": "2.0.0-beta.132",
     "@tiptap/extension-bold": "^2.0.0-beta.24",
@@ -34,6 +34,7 @@
     "yjs": "13.5.16"
   },
   "scripts": {
+    "jest": "jest --",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

@@ -50,6 +50,7 @@ declare module "@tiptap/core" {
       addAnnotation: (data: any) => ReturnType;
       updateAnnotation: (id: string, data: any) => ReturnType;
       deleteAnnotation: (id: string) => ReturnType;
+      refreshDecorations: () => ReturnType;
     };
   }
 }
@@ -76,16 +77,24 @@ export const CollaborationAnnotation = Extension.create({
         { ev }
       );
 
-      const transaction = this.editor.state.tr.setMeta(AnnotationPluginKey, {
-        type: "createDecorations",
-      });
-
-      this.editor.view.dispatch(transaction);
+      this.editor.commands.refreshDecorations();
     });
   },
 
   addCommands() {
     return {
+      refreshDecorations:
+        () =>
+        ({ dispatch, state, tr }) => {
+          if (dispatch) {
+            tr.setMeta(AnnotationPluginKey, {
+              type: "createDecorations",
+            });
+            dispatch(tr);
+          }
+
+          return true;
+        },
       addAnnotation:
         (data: any) =>
         ({ dispatch, state, tr }) => {

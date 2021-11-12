@@ -100,6 +100,7 @@ export class AnnotationState {
     const { doc, type, binding } = ystate;
     const decorations: Decoration[] = [];
 
+    console.log("refresh deco", map.toJSON());
     map.forEach((annotation, key) => {
       const pos = relativePositionToAbsolutePosition(
         doc,
@@ -112,13 +113,19 @@ export class AnnotationState {
         return;
       }
 
+      const node = state.doc.resolve(pos);
       console.log(
         `%c [${this.options.instance}] createDecorations Decoration.widget()`,
         `color: ${this.color}`,
-        { key, doc, annotation }
-      );
 
-      const node = state.doc.resolve(pos);
+        {
+          key,
+          doc,
+          annotation,
+          from: pos,
+          to: pos + node.nodeAfter?.nodeSize || 0,
+        }
+      );
 
       decorations.push(
         Decoration.node(
@@ -165,6 +172,10 @@ export class AnnotationState {
         this.createDecorations(state);
       }
 
+      // @ts-ignore
+      if (action.type === "refreshDecorations") {
+        this.createDecorations(state);
+      }
       return this;
     }
 
@@ -207,6 +218,9 @@ export class AnnotationState {
           new Mapping([new StepMap(ranges)]),
           transaction.doc
         );
+        console.log("updated locally", this.decorations.find());
+        // can't create decorations at this point, need to wait until state
+        // this.createDecorations(state);
         return this;
       }
       // check split at decoration
