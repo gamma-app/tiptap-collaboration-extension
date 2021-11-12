@@ -11,8 +11,7 @@ import {
 export interface AddAnnotationAction {
   type: "addAnnotation";
   data: any;
-  from: number;
-  to: number;
+  pos: number;
 }
 
 export interface UpdateAnnotationAction {
@@ -72,7 +71,7 @@ export const CollaborationAnnotation = Extension.create({
   onCreate() {
     getMap(this.options.document).observe((ev) => {
       console.log(
-        `%c [${this.options.instance}] map.observe updated  → createDecorations`,
+        `%c [${this.options.instance}] map.observe updated → dispatching createDecorations`,
         `color: ${this.options.color}`,
         { ev }
       );
@@ -91,21 +90,21 @@ export const CollaborationAnnotation = Extension.create({
         (data: any) =>
         ({ dispatch, state, tr }) => {
           const { selection } = state;
-          const parent = findParentNodeClosestToPos(
+          const blockParent = findParentNodeClosestToPos(
             this.editor.state.doc.resolve(selection.from),
             (node) => node.type.isBlock
           );
 
-          if (!parent) {
+          if (!blockParent) {
             return false;
           }
-          const from = parent.start;
-          console.log("addAnnotation", { from, parent });
+          const { pos } = blockParent;
+          console.log("addAnnotation", { parent: blockParent });
 
           if (dispatch && data) {
             state.tr.setMeta(AnnotationPluginKey, <AddAnnotationAction>{
               type: "addAnnotation",
-              from,
+              pos,
               data,
             });
           }

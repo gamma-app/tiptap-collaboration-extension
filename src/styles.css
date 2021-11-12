@@ -5,6 +5,7 @@
 }
 
 .ProseMirror {
+  margin-left: 70px;
   padding: 5px 10px;
   font-family: courier;
   outline: solid 2px #2f83f9;
@@ -22,7 +23,7 @@ p {
 span.widget {
   background: #9def8f;
   position: absolute;
-  right: -70px;
+  left: -70px;
   top: 0px;
   border-radius: 5px;
   padding: 2px 3px;

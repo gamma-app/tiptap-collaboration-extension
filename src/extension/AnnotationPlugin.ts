@@ -32,16 +32,10 @@ export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
     props: {
       decorations(state) {
         const { decorations } = this.getState(state);
-        const { selection } = state;
-
-        if (!selection.empty) {
-          return decorations;
-        }
-
-        // const annotations = this.getState(state).annotationsAt(selection.from);
 
         options.onUpdate(decorations.find().map((d) => new AnnotationItem(d)));
 
+        // console.log("decorations", decorations);
         return decorations;
       },
     },

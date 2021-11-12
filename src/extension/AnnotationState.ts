@@ -14,7 +14,6 @@ import {
 } from "./extension";
 import { AnnotationPluginKey } from "./AnnotationPlugin";
 import { AnnotationItem } from "./AnnotationItem";
-import { Content } from "@tiptap/core";
 
 export interface AnnotationStateOptions {
   map: Y.Map<any>;
@@ -30,8 +29,6 @@ export class AnnotationState {
   color: string;
 
   domNodeMap: any = {};
-
-  localAnnotations: { [key: string]: { pos: number } } = {};
 
   constructor(options: AnnotationStateOptions) {
     this.options = options;
@@ -57,15 +54,15 @@ export class AnnotationState {
     const ystate = ySyncPluginKey.getState(state);
     const { type, binding } = ystate;
     const { map } = this.options;
-    const { from, data } = action;
+    const { pos, data } = action;
     const absoluteFrom = absolutePositionToRelativePosition(
-      from,
+      pos,
       type,
       binding.mapping
     );
     const randomId = this.randomId();
     map.set(randomId, {
-      from: absoluteFrom,
+      pos: absoluteFrom,
       data,
     });
   }
@@ -97,60 +94,63 @@ export class AnnotationState {
     });
   }
 
-  createDecorations(state: EditorState, remoteUpdate = false) {
-    // console.log(
-    //   `%c [${this.options.instance}] calling create decorations`,
-    //   `color: ${this.color}`
-    // );
+  createDecorations(state: EditorState) {
     const { map } = this.options;
     const ystate = ySyncPluginKey.getState(state);
     const { doc, type, binding } = ystate;
     const decorations: Decoration[] = [];
 
     map.forEach((annotation, key) => {
-      const from = relativePositionToAbsolutePosition(
+      const pos = relativePositionToAbsolutePosition(
         doc,
         type,
-        annotation.from,
+        annotation.pos,
         binding.mapping
       );
 
-      if (!from) {
+      if (!pos) {
         return;
       }
 
       console.log(
-        `%c [${this.options.instance}] Decoration.widget()`,
+        `%c [${this.options.instance}] createDecorations Decoration.widget()`,
         `color: ${this.color}`,
-        from,
-        { key, doc, from: annotation.from, data: annotation.data }
+        { key, doc, annotation }
       );
 
-      if (!this.domNodeMap[key]) {
-        const el = document.createElement("span");
-        el.classList.add("widget", "widget-" + key);
-        this.domNodeMap[key] = el;
-      }
-
-      if (!remoteUpdate) {
-        this.localAnnotations[key] = { pos: from };
-      }
+      // if (!this.domNodeMap[key]) {
+      //   const el = document.createElement("span");
+      //   el.classList.add("widget", "widget-" + key);
+      //   this.domNodeMap[key] = el;
+      // }
+      const node = state.doc.resolve(pos);
+      // console.log("jordan parent", node);
 
       decorations.push(
-        Decoration.widget(
-          from,
-          () => {
-            const node = this.domNodeMap[key];
-            node.innerHTML = annotation.data;
-            return node;
-          },
+        Decoration.node(
+          // position was saved as a `pos` of parent block node, add 1 to convert it the `parent.from`
+          // this allows text to be written before the node
+          pos,
+          pos + node.nodeAfter?.nodeSize || 0,
+          {},
           {
-            key,
-            side: -1,
+            data: annotation.data,
             destroy(node) {
-              // console.log("DESTROYED!", node);
+              console.log("DESTROYED!", node);
             },
           }
+          // () => {
+          //   const node = this.domNodeMap[key];
+          //   // node.innerHTML = annotation.data;
+          //   return node;
+          // },
+          // {
+          //   key,
+          //   side: -1,
+          //   destroy(node) {
+          //     // console.log("DESTROYED!", node);
+          //   },
+          // }
         )
       );
     });
@@ -167,11 +167,6 @@ export class AnnotationState {
       | DeleteAnnotationAction;
 
     if (action && action.type) {
-      console.log(
-        `%c [${this.options.instance}] action: ${action.type}`,
-        `color: ${this.color}`
-      );
-
       if (action.type === "addAnnotation") {
         this.addAnnotation(action, state);
       }
@@ -201,75 +196,106 @@ export class AnnotationState {
         `%c [${this.options.instance}] isChangeOrigin: true → createDecorations`,
         `color: ${this.color}`
       );
-      this.createDecorations(state, true);
+      // create decorations off YMap RelativeChange
+      this.createDecorations(state);
 
       return this;
-    } else {
-      this.decorations = this.decorations.map(
-        transaction.mapping,
-        transaction.doc
-      );
     }
-    return this;
+
+    // LOCAL CHANGE
 
     const splitBlockAtStart = transaction.getMeta("SPLIT_BLOCK_START");
+    const joinBackward = transaction.getMeta("JOIN_BACKWARD");
+    const joinForward = transaction.getMeta("JOIN_FORWARD");
+
     if (splitBlockAtStart) {
-      this.options.map.doc?.transact(() => {
-        console.log("TRANSACT");
-        this.decorations.find().forEach((deco) => {
-          const { from: currentFrom } = deco;
-          let finalFrom = currentFrom;
-
-          if (splitBlockAtStart) {
-            const { from: splitFrom, offset } = splitBlockAtStart;
-            if (splitFrom === currentFrom) {
-              console.log(
-                `%c [${this.options.instance}] split at start:, ${{
-                  splitFrom,
-                  offset,
-                }}`,
-                `color: ${this.color}`
-              );
-
-              finalFrom = currentFrom + offset;
-            }
-          }
-
-          const newFrom = absolutePositionToRelativePosition(
-            finalFrom,
-            ystate.type,
-            ystate.binding.mapping
-          );
-
-          const { key } = deco.spec;
-          const annotation = this.options.map.get(key);
-
-          annotation.from = newFrom;
-
-          this.options.map.set(key, annotation);
-        });
-      });
-    } else {
-      // LOCAL CHANGE
-      // Use ProseMirror to update positions
       console.log(
-        `[${this.options.instance}] isChangeOrigin: false → ProseMirror mapping`
+        `%c [${this.options.instance}] LOCAL CHANGE IS split block`,
+        `color: ${this.color}`,
+        splitBlockAtStart
       );
-      this.createDecorations(state);
-      console.log("transload meta", transaction.getMeta("RELOAD"));
-      if (transaction.getMeta("RELOAD")) {
-        setTimeout(() => {
-          console.log("reloading");
-          const tr = state.tr.insert(1, []);
-          tr.setMeta("RELOAD", true);
-          state.apply(tr);
-        });
+
+      if (splitBlockAtStart.parentOffset === 0) {
+        const ranges = [
+          splitBlockAtStart.from - 1,
+          0,
+          splitBlockAtStart.offset,
+        ];
+        // transaction.mapping.appendMap();
+        this.decorations = this.decorations.map(
+          new Mapping([new StepMap(ranges)]),
+          transaction.doc
+        );
+        return this;
       }
-      // this.decorations = this.decorations.map(
-      //   transaction.mapping,
-      //   transaction.doc
-      // );
+      // check split at decoration
+      const decos = this.decorations.find(
+        splitBlockAtStart.from,
+        splitBlockAtStart.from
+      );
+      if (decos.length > 0) {
+        // split inbetween the decoration
+        // recreate from YMap
+        // console.log("found decos at ", splitBlockAtStart.from, decos);
+        this.createDecorations(state);
+        return this;
+      }
+    } else if (joinBackward) {
+      console.log(
+        `%c [${this.options.instance}] LOCAL CHANGE IS join backward`,
+        `color: ${this.color}`,
+        joinBackward
+      );
+
+      const decos = this.decorations.find(
+        joinBackward.joinedPos,
+        joinBackward.joinedPos + joinBackward.joinedNode.nodeSize
+      );
+      console.log(
+        "join backward finding ",
+        [
+          joinBackward.joinedPos,
+          joinBackward.joinedPos + joinBackward.joinedNode.nodeSize,
+        ],
+        decos
+      );
+      if (decos.length > 0) {
+        this.createDecorations(state);
+        return this;
+      }
+    } else if (joinForward) {
+      console.log(
+        `%c [${this.options.instance}] LOCAL CHANGE IS join forward`,
+        `color: ${this.color}`,
+        joinForward
+      );
+
+      const decos = this.decorations.find(
+        joinForward.joinedPos,
+        joinForward.joinedPos + joinForward.joinedNode.nodeSize
+      );
+      console.log(
+        "join forward finding ",
+        [
+          joinForward.joinedPos,
+          joinForward.joinedPos + joinForward.joinedNode.nodeSize,
+        ],
+        decos
+      );
+      if (decos.length > 0) {
+        this.createDecorations(state);
+        return this;
+      }
     }
+
+    console.log(
+      `%c [${this.options.instance}] LOCAL CHANGE no special block stuff, mapping decorations`,
+      `color: ${this.color}`
+    );
+    this.decorations = this.decorations.map(
+      transaction.mapping,
+      transaction.doc
+    );
     return this;
   }
 }
