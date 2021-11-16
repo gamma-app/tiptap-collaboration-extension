@@ -25,7 +25,6 @@ export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
       },
 
       apply(transaction, pluginState, oldEditorState, newEditorState) {
-        console.log(`${options.instance} applying transaction`);
         return pluginState.apply(transaction, newEditorState);
       },
     },
@@ -47,7 +46,7 @@ export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
       decorations(state) {
         const { decorations } = this.getState(state);
 
-        console.log("deco props", decorations.find());
+        // console.log("deco props", decorations.find());
         options.onUpdate(decorations.find().map((d) => new AnnotationItem(d)));
 
         return decorations;

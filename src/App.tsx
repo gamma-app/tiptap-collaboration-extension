@@ -1,6 +1,12 @@
 import "./styles.css";
 import { Tiptap } from "./Tiptap";
 import * as Y from "yjs";
+import { EditorView } from "prosemirror-view";
+
+EditorView.prototype.updateState = function updateState(state) {
+  if (!this.docView) return; // This prevents the matchesNode error on hot reloads
+  this.updateStateInner(state, this.state.plugins != state.plugins);
+};
 
 export default function App() {
   const ydoc = new Y.Doc();

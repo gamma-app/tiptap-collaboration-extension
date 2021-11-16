@@ -8,11 +8,11 @@ import {
 
 export const ParagraphView = (nodeViewProps: NodeViewProps) => {
   const { decorations, editor } = nodeViewProps;
-  console.log("ParagraphView", { decorations });
+  // console.log("ParagraphView", { decorations });
   return (
     <NodeViewWrapper style={{ position: "relative" }}>
-      {decorations.map((d) => (
-        <span className="widget" tabIndex={8999}>
+      {decorations.map((d, ind) => (
+        <span className="widget" tabIndex={8999} key={ind}>
           {d.spec.data}
         </span>
       ))}

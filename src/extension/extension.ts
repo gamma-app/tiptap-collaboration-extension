@@ -73,8 +73,7 @@ export const CollaborationAnnotation = Extension.create({
     getMap(this.options.document).observe((ev) => {
       console.log(
         `%c [${this.options.instance}] map.observe updated → dispatching createDecorations`,
-        `color: ${this.options.color}`,
-        { ev }
+        `color: ${this.options.color}`
       );
 
       this.editor.commands.refreshDecorations();

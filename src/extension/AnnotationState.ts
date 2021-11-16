@@ -120,7 +120,7 @@ export class AnnotationState {
 
         {
           key,
-          doc,
+          // doc,
           annotation,
           from: pos,
           to: pos + node.nodeAfter?.nodeSize || 0,
@@ -218,7 +218,7 @@ export class AnnotationState {
           new Mapping([new StepMap(ranges)]),
           transaction.doc
         );
-        console.log("updated locally", this.decorations.find());
+        // console.log("updated locally", this.decorations.find());
         // can't create decorations at this point, need to wait until state
         // this.createDecorations(state);
         return this;
@@ -228,7 +228,7 @@ export class AnnotationState {
         splitBlockAtStart.from,
         splitBlockAtStart.from
       );
-      console.log("jordan found decos", decos);
+      // console.log("jordan found decos", decos);
       if (decos.length > 0) {
         // split inbetween the decoration
         // recreate from YMap
