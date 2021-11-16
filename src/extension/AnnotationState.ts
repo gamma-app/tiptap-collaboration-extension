@@ -68,10 +68,10 @@ export class AnnotationState {
   }
 
   updateAnnotation(action: UpdateAnnotationAction) {
-    console.log(
-      `%c [${this.options.instance}] update annotation`,
-      `color: ${this.color}`
-    );
+    // console.log(
+    //   `%c [${this.options.instance}] update annotation`,
+    //   `color: ${this.color}`
+    // );
     const { map } = this.options;
 
     const annotation = map.get(action.id);
@@ -97,10 +97,12 @@ export class AnnotationState {
   createDecorations(state: EditorState) {
     const { map } = this.options;
     const ystate = ySyncPluginKey.getState(state);
+    if (!ystate.binding) {
+      return this;
+    }
     const { doc, type, binding } = ystate;
     const decorations: Decoration[] = [];
 
-    console.log("refresh deco", map.toJSON());
     map.forEach((annotation, key) => {
       const pos = relativePositionToAbsolutePosition(
         doc,
@@ -114,18 +116,18 @@ export class AnnotationState {
       }
 
       const node = state.doc.resolve(pos);
-      console.log(
-        `%c [${this.options.instance}] createDecorations Decoration.widget()`,
-        `color: ${this.color}`,
+      // console.log(
+      //   `%c [${this.options.instance}] createDecorations Decoration.widget()`,
+      //   `color: ${this.color}`,
 
-        {
-          key,
-          // doc,
-          annotation,
-          from: pos,
-          to: pos + node.nodeAfter?.nodeSize || 0,
-        }
-      );
+      //   {
+      //     key,
+      //     // doc,
+      //     annotation,
+      //     from: pos,
+      //     to: pos + node.nodeAfter?.nodeSize || 0,
+      //   }
+      // );
 
       decorations.push(
         Decoration.node(
@@ -182,12 +184,13 @@ export class AnnotationState {
     // Use Y.js to update positions
     const ystate = ySyncPluginKey.getState(state);
 
+    console.log("is remote change", ystate.isChangeOrigin);
     if (ystate.isChangeOrigin) {
       // REMOTE CHANGE
-      console.log(
-        `%c [${this.options.instance}] isChangeOrigin: true → createDecorations`,
-        `color: ${this.color}`
-      );
+      // console.log(
+      //   `%c [${this.options.instance}] isChangeOrigin: true → createDecorations`,
+      //   `color: ${this.color}`
+      // );
       // create decorations off YMap RelativeChange
       this.createDecorations(state);
 
@@ -199,6 +202,7 @@ export class AnnotationState {
     const splitBlockAtStart = transaction.getMeta("SPLIT_BLOCK_START");
     const joinBackward = transaction.getMeta("JOIN_BACKWARD");
     const joinForward = transaction.getMeta("JOIN_FORWARD");
+    console.log("in local change", transaction);
 
     if (splitBlockAtStart) {
       console.log(
@@ -218,7 +222,6 @@ export class AnnotationState {
           new Mapping([new StepMap(ranges)]),
           transaction.doc
         );
-        // console.log("updated locally", this.decorations.find());
         // can't create decorations at this point, need to wait until state
         // this.createDecorations(state);
         return this;
@@ -228,66 +231,64 @@ export class AnnotationState {
         splitBlockAtStart.from,
         splitBlockAtStart.from
       );
-      // console.log("jordan found decos", decos);
       if (decos.length > 0) {
         // split inbetween the decoration
         // recreate from YMap
-        // console.log("found decos at ", splitBlockAtStart.from, decos);
         this.createDecorations(state);
         return this;
       }
     } else if (joinBackward) {
-      console.log(
-        `%c [${this.options.instance}] LOCAL CHANGE IS join backward`,
-        `color: ${this.color}`,
-        joinBackward
-      );
+      // console.log(
+      //   `%c [${this.options.instance}] LOCAL CHANGE IS join backward`,
+      //   `color: ${this.color}`,
+      //   joinBackward
+      // );
 
       const decos = this.decorations.find(
         joinBackward.joinedPos,
         joinBackward.joinedPos + joinBackward.joinedNode.nodeSize
       );
-      console.log(
-        "join backward finding ",
-        [
-          joinBackward.joinedPos,
-          joinBackward.joinedPos + joinBackward.joinedNode.nodeSize,
-        ],
-        decos
-      );
+      // console.log(
+      //   "join backward finding ",
+      //   [
+      //     joinBackward.joinedPos,
+      //     joinBackward.joinedPos + joinBackward.joinedNode.nodeSize,
+      //   ],
+      //   decos
+      // );
       if (decos.length > 0) {
         this.createDecorations(state);
         return this;
       }
     } else if (joinForward) {
-      console.log(
-        `%c [${this.options.instance}] LOCAL CHANGE IS join forward`,
-        `color: ${this.color}`,
-        joinForward
-      );
+      // console.log(
+      //   `%c [${this.options.instance}] LOCAL CHANGE IS join forward`,
+      //   `color: ${this.color}`,
+      //   joinForward
+      // );
 
       const decos = this.decorations.find(
         joinForward.joinedPos,
         joinForward.joinedPos + joinForward.joinedNode.nodeSize
       );
-      console.log(
-        "join forward finding ",
-        [
-          joinForward.joinedPos,
-          joinForward.joinedPos + joinForward.joinedNode.nodeSize,
-        ],
-        decos
-      );
+      // console.log(
+      //   "join forward finding ",
+      //   [
+      //     joinForward.joinedPos,
+      //     joinForward.joinedPos + joinForward.joinedNode.nodeSize,
+      //   ],
+      //   decos
+      // );
       if (decos.length > 0) {
         this.createDecorations(state);
         return this;
       }
     }
 
-    console.log(
-      `%c [${this.options.instance}] LOCAL CHANGE no special block stuff, mapping decorations`,
-      `color: ${this.color}`
-    );
+    // console.log(
+    //   `%c [${this.options.instance}] LOCAL CHANGE no special block stuff, mapping decorations`,
+    //   `color: ${this.color}`
+    // );
     this.decorations = this.decorations.map(
       transaction.mapping,
       transaction.doc

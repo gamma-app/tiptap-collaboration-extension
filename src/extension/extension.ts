@@ -71,10 +71,10 @@ export const CollaborationAnnotation = Extension.create({
 
   onCreate() {
     getMap(this.options.document).observe((ev) => {
-      console.log(
-        `%c [${this.options.instance}] map.observe updated → dispatching createDecorations`,
-        `color: ${this.options.color}`
-      );
+      // console.log(
+      //   `%c [${this.options.instance}] map.observe updated → dispatching createDecorations`,
+      //   `color: ${this.options.color}`
+      // );
 
       this.editor.commands.refreshDecorations();
     });
@@ -102,13 +102,11 @@ export const CollaborationAnnotation = Extension.create({
             this.editor.state.doc.resolve(selection.from),
             (node) => node.type.isBlock
           );
-          console.log("finding block parent", blockParent);
 
           if (!blockParent) {
             return false;
           }
           const { pos } = blockParent;
-          console.log("addAnnotation", { parent: blockParent });
 
           if (dispatch && data) {
             state.tr.setMeta(AnnotationPluginKey, <AddAnnotationAction>{

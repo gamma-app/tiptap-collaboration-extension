@@ -1,7 +1,15 @@
 import React from "react";
-import { cleanup, act, render, RenderResult } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import {
+  cleanup,
+  act,
+  render,
+  RenderResult,
+  fireEvent,
+} from "@testing-library/react";
 import * as Y from "yjs";
 import { Editor, EditorContent } from "@tiptap/react";
+import ReactTestUtils from "react-dom/test-utils";
 import { useTestEditor } from "../useTestEditor";
 import { EditorView } from "prosemirror-view";
 
@@ -83,9 +91,47 @@ describe("local editor", () => {
     expect(localEditor.queryByText("block 1")).toHaveTextContent("block 1");
   });
 
-  it("creates a decoration when adding an annotation", async () => {
+  it("creates a decoration when adding an annotation at beginning", async () => {
     act(() => {
       localEditorInstance.commands.setTextSelection(4);
+      localEditorInstance.commands.addAnnotation("comment 1");
+    });
+    expect(localEditor.queryByText("block 1")).toHaveTextContent("block 1");
+    expect(decos[0]).toMatchObject({
+      decoration: {
+        from: 3,
+        to: 12,
+        type: {
+          spec: {
+            data: "comment 1",
+          },
+        },
+      },
+    });
+  });
+
+  it("creates a decoration when adding an annotation in middle", async () => {
+    act(() => {
+      localEditorInstance.commands.setTextSelection(6);
+      localEditorInstance.commands.addAnnotation("comment 1");
+    });
+    expect(localEditor.queryByText("block 1")).toHaveTextContent("block 1");
+    expect(decos[0]).toMatchObject({
+      decoration: {
+        from: 3,
+        to: 12,
+        type: {
+          spec: {
+            data: "comment 1",
+          },
+        },
+      },
+    });
+  });
+
+  it("creates a decoration when adding an annotation at end", async () => {
+    act(() => {
+      localEditorInstance.commands.setTextSelection(11);
       localEditorInstance.commands.addAnnotation("comment 1");
     });
     expect(localEditor.queryByText("block 1")).toHaveTextContent("block 1");
@@ -138,6 +184,59 @@ describe("local editor", () => {
       decoration: {
         from: 3,
         to: 14,
+        type: {
+          spec: {
+            data: "comment 1",
+          },
+        },
+      },
+    });
+  });
+
+  it("puts the decoration on the previous block when splitting block in middle", async () => {
+    act(() => {
+      localEditorInstance.commands.setTextSelection(4);
+      localEditorInstance.commands.addAnnotation("comment 1");
+      localEditorInstance.commands.setTextSelection(6);
+      localEditorInstance.commands.insertContent("oo");
+    });
+    expect(localEditor.queryByText("blooock 1")).toHaveTextContent("blooock 1");
+    expect(localEditorInstance.getHTML()).toBe(`<h1>h</h1><p>blooock 1</p>`);
+    expect(decos[0]).toMatchObject({
+      decoration: {
+        from: 3,
+        to: 14,
+        type: {
+          spec: {
+            data: "comment 1",
+          },
+        },
+      },
+    });
+  });
+
+  it.only("splitting block and backspacing", async () => {
+    // localEditorInstance.on("transaction", ({ editor, transaction }) => {
+    //   console.log("on transaction", JSON.stringify(transaction.meta));
+    // });
+    act(async () => {
+      localEditorInstance.commands.setTextSelection(4);
+      localEditorInstance.commands.addAnnotation("comment 1");
+      localEditorInstance.commands.setTextSelection(6);
+      const node = await localEditor.findByText("block 1");
+      userEvent.type(node, `{enter}`);
+
+      // fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+    });
+
+    // console.log(localEditorInstance.getHTML());
+    console.log("decos", decos);
+    // expect(localEditor.queryByText("blooock 1")).toHaveTextContent("blooock 1");
+    // expect(localEditorInstance.getHTML()).toBe(`<h1>h</h1><p>blooock 1</p>`);
+    expect(decos[0]).toMatchObject({
+      decoration: {
+        from: 3,
+        to: 7,
         type: {
           spec: {
             data: "comment 1",

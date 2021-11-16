@@ -12,6 +12,7 @@ export const KeymapOverride = Extension.create({
         () => commands.createParagraphNear(),
         () => commands.liftEmptyBlock(),
         ({ tr, state, dispatch, editor }) => {
+          console.log("handlinge enter");
           // If a block is split from the very front
           // (i.e. moving the entire block),
           // mark the transaction so that the annotation
@@ -20,6 +21,7 @@ export const KeymapOverride = Extension.create({
           const result = commands.splitBlock();
 
           if (result) {
+            console.log("split blockkkkk", tr);
             // How far did the split move us
             const offset = tr.selection.$from.pos - pos;
             tr.setMeta("SPLIT_BLOCK_START", {
@@ -27,6 +29,7 @@ export const KeymapOverride = Extension.create({
               from: pos,
               offset,
             });
+            console.log("split blockkkkk", tr);
           }
           return result;
         },

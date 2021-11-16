@@ -6,17 +6,35 @@ import { useTestEditor } from "./useTestEditor";
 
 export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
   const [comments, setComments] = useState([]);
+  const [selection, setSelection] = useState<any>({});
+
+  const onUpdate = (decos: any) => {
+    setComments(decos);
+  };
 
   const editor = useTestEditor({
     ydoc,
     content: `<h1>h</h1><p>block 1</p>`,
     instance,
     color,
-    onUpdate: setComments,
+    onUpdate,
     devTools,
   });
 
-  if (!window["editor"]) {
+  useEffect(() => {
+    if (!editor) return;
+    if (instance !== "editor1") return;
+
+    editor.on("transaction", ({ editor, transaction }) => {
+      console.log("on transaction", transaction);
+    });
+    editor.on("selectionUpdate", ({ editor }) => {
+      console.log("selection update");
+      setSelection(editor.state.selection);
+    });
+  }, [editor, instance]);
+
+  if (devTools && !window["editor"]) {
     window["editor"] = editor;
   }
 
@@ -28,11 +46,15 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
           marginLeft: "70px",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "row" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            alignItems: "center",
+            marginTop: "10px",
+          }}
+        >
           <button
-            style={{
-              marginTop: "15px",
-            }}
             onClick={() => {
               const comment = "c #" + Math.floor(Math.random() * 100);
               editor?.commands.addAnnotation(comment);
@@ -41,17 +63,21 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
             Comment
           </button>
           <button
-            style={{
-              marginTop: "15px",
+            onClick={() => {
+              editor?.commands.enter();
             }}
+          >
+            Enter
+          </button>
+          <button
             onClick={() => {
               editor?.commands.refreshDecorations();
             }}
           >
             Refresh
           </button>
+          <div style={{ marginLeft: "10px " }}>{JSON.stringify(selection)}</div>
         </div>
-
         {comments.map((c, idx) => {
           return <div key={idx}>{JSON.stringify(c)}</div>;
         })}
