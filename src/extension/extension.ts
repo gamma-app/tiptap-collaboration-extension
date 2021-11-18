@@ -1,3 +1,4 @@
+// @ts-ignore
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
 import * as Y from "yjs";
 import { Extension } from "@tiptap/core";
@@ -7,11 +8,15 @@ import {
   createAnnotationPlugin,
   AnnotationPluginKey,
 } from "./AnnotationPlugin";
+require("source-map-support").install();
 
 export interface AddAnnotationAction {
   type: "addAnnotation";
   data: any;
   pos: number;
+}
+export interface ClearAnnotationsAction {
+  type: "clearAnnotations";
 }
 
 export interface UpdateAnnotationAction {
@@ -50,6 +55,7 @@ declare module "@tiptap/core" {
       addAnnotation: (data: any) => ReturnType;
       updateAnnotation: (id: string, data: any) => ReturnType;
       deleteAnnotation: (id: string) => ReturnType;
+      clearAnnotations: () => ReturnType;
       refreshDecorations: () => ReturnType;
     };
   }
@@ -82,6 +88,18 @@ export const CollaborationAnnotation = Extension.create({
 
   addCommands() {
     return {
+      clearAnnotations:
+        () =>
+        ({ dispatch, state, tr }) => {
+          if (dispatch) {
+            tr.setMeta(AnnotationPluginKey, {
+              type: "clearAnnotations",
+            });
+            dispatch(tr);
+          }
+
+          return true;
+        },
       refreshDecorations:
         () =>
         ({ dispatch, state, tr }) => {

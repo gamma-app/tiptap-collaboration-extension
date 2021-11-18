@@ -4,6 +4,9 @@ import applyDevTools from "prosemirror-dev-tools";
 import { useEffect, useState } from "react";
 import { useTestEditor } from "./useTestEditor";
 
+const sleep: () => Promise<void> = () =>
+  new Promise((res) => setTimeout(() => res(), 0));
+
 export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
   const [comments, setComments] = useState([]);
   const [selection, setSelection] = useState<any>({});
@@ -14,7 +17,7 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
 
   const editor = useTestEditor({
     ydoc,
-    content: `<h1>h</h1><p>block 1</p>`,
+    content: `<h1>h</h1><p>block 1</p><p>block 2</p>`,
     instance,
     color,
     onUpdate,
@@ -22,8 +25,7 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
   });
 
   useEffect(() => {
-    if (!editor) return;
-    if (instance !== "editor1") return;
+    if (!editor || instance !== "editor1") return;
 
     editor.on("transaction", ({ editor, transaction }) => {
       console.log("on transaction", transaction);
@@ -32,6 +34,18 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
       console.log("selection update");
       setSelection(editor.state.selection);
     });
+    async function doit() {
+      // editor.commands.clearAnnotations();
+      await sleep();
+      editor.commands.setTextSelection(6);
+      await sleep();
+      editor.commands.addAnnotation("c1");
+      await sleep();
+
+      editor.commands.setTextSelection(14);
+      editor.commands.addAnnotation("c2");
+    }
+    setTimeout(() => doit(), 500);
   }, [editor, instance]);
 
   if (devTools && !window["editor"]) {

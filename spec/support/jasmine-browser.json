@@ -1,19 +1,13 @@
 {
-  "srcDir": "src",
-  "srcFiles": [
-    "**/*.?(m)js"
-  ],
-  "specDir": "spec",
-  "specFiles": [
-    "**/*[sS]pec.?(m)js"
-  ],
-  "helpers": [
-    "helpers/**/*.?(m)js"
-  ],
+  "srcDir": "dist",
+  "srcFiles": [],
+  "specDir": "dist",
+  "helpers": [],
+  "specFiles": ["test-bundle.js"],
   "env": {
     "stopSpecOnExpectationFailure": false,
     "stopOnSpecFailure": false,
-    "random": true
+    "random": false
   },
   "browser": {
     "name": "chrome"

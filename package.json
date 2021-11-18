@@ -28,6 +28,7 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-scripts": "4.0.3",
+    "ts-loader": "~8.2.0",
     "typescript": "^4.1.2",
     "web-vitals": "^1.0.1",
     "y-protocols": "1.0.5",
@@ -35,6 +36,7 @@
   },
   "scripts": {
     "jest": "jest --",
+    "b": "webpack -w",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --transformIgnorePatterns \"node_modules/(?!(y-protocols))/\"",
@@ -42,8 +44,7 @@
   },
   "eslintConfig": {
     "extends": [
-      "react-app",
-      "react-app/jest"
+      "react-app"
     ]
   },
   "browserslist": {
@@ -60,8 +61,17 @@
   },
   "devDependencies": {
     "@testing-library/dom": "^8.11.1",
+    "@types/chai": "^4.2.22",
+    "chai": "^4.3.4",
+    "chai-better-shallow-deep-equal": "^1.1.1",
+    "chai-shallow-deep-equal": "^1.4.6",
+    "expect": "^27.3.1",
     "jasmine-browser-runner": "^0.9.0",
     "jasmine-core": "^3.10.1",
-    "karma": "^6.3.9"
+    "jasmine-expect": "^5.0.0",
+    "karma": "^6.3.9",
+    "source-map-support": "^0.5.20",
+    "webpack-cli": "^4.9.1",
+    "webpack-dev-server": "^4.5.0"
   }
 }

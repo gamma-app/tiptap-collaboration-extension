@@ -29,7 +29,9 @@ export const KeymapOverride = Extension.create({
               from: pos,
               offset,
             });
-            console.log("split blockkkkk", tr);
+            setTimeout(() => {
+              this.editor.commands.refreshDecorations();
+            }, 0);
           }
           return result;
         },
@@ -40,6 +42,7 @@ export const KeymapOverride = Extension.create({
         () => commands.undoInputRule(),
         () => commands.deleteSelection(),
         ({ tr, state }) => {
+          console.log("handling backspace");
           const { parent: node } = tr.selection.$from;
           const joinBackward = commands.joinBackward();
 

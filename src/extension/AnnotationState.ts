@@ -9,6 +9,7 @@ import {
 } from "y-prosemirror";
 import {
   AddAnnotationAction,
+  ClearAnnotationsAction,
   DeleteAnnotationAction,
   UpdateAnnotationAction,
 } from "./extension";
@@ -50,9 +51,20 @@ export class AnnotationState {
     }
   }
 
+  clearAnnotations(action: ClearAnnotationsAction, state: EditorState) {
+    const ystate = ySyncPluginKey.getState(state);
+    if (!ystate.binding) {
+      return this;
+    }
+    this.options.map.clear();
+  }
+
   addAnnotation(action: AddAnnotationAction, state: EditorState) {
     const ystate = ySyncPluginKey.getState(state);
     const { type, binding } = ystate;
+    if (!ystate.binding) {
+      return this;
+    }
     const { map } = this.options;
     const { pos, data } = action;
     const absoluteFrom = absolutePositionToRelativePosition(
@@ -154,11 +166,16 @@ export class AnnotationState {
     const action = transaction.getMeta(AnnotationPluginKey) as
       | AddAnnotationAction
       | UpdateAnnotationAction
+      | ClearAnnotationsAction
       | DeleteAnnotationAction;
 
     if (action && action.type) {
       if (action.type === "addAnnotation") {
         this.addAnnotation(action, state);
+      }
+
+      if (action.type === "clearAnnotations") {
+        this.clearAnnotations(action, state);
       }
 
       if (action.type === "updateAnnotation") {
@@ -198,12 +215,17 @@ export class AnnotationState {
     }
 
     // LOCAL CHANGE
+    return this.handleLocalChange(transaction, state);
+  }
+
+  handleLocalChange(transaction: Transaction, state: EditorState): this {
+    return this;
 
     const splitBlockAtStart = transaction.getMeta("SPLIT_BLOCK_START");
     const joinBackward = transaction.getMeta("JOIN_BACKWARD");
     const joinForward = transaction.getMeta("JOIN_FORWARD");
-    console.log("in local change", transaction);
-
+    // console.log("in local change", transaction);
+    return this;
     if (splitBlockAtStart) {
       console.log(
         `%c [${this.options.instance}] LOCAL CHANGE IS split block`,
@@ -226,6 +248,7 @@ export class AnnotationState {
         // this.createDecorations(state);
         return this;
       }
+      return this;
       // check split at decoration
       const decos = this.decorations.find(
         splitBlockAtStart.from,
@@ -234,28 +257,22 @@ export class AnnotationState {
       if (decos.length > 0) {
         // split inbetween the decoration
         // recreate from YMap
+        console.log("recreating decorations");
         this.createDecorations(state);
         return this;
       }
     } else if (joinBackward) {
-      // console.log(
-      //   `%c [${this.options.instance}] LOCAL CHANGE IS join backward`,
-      //   `color: ${this.color}`,
-      //   joinBackward
-      // );
+      console.log(
+        `%c [${this.options.instance}] LOCAL CHANGE IS join backward`,
+        `color: ${this.color}`,
+        joinBackward,
+        this.options.map.toJSON()
+      );
 
       const decos = this.decorations.find(
         joinBackward.joinedPos,
         joinBackward.joinedPos + joinBackward.joinedNode.nodeSize
       );
-      // console.log(
-      //   "join backward finding ",
-      //   [
-      //     joinBackward.joinedPos,
-      //     joinBackward.joinedPos + joinBackward.joinedNode.nodeSize,
-      //   ],
-      //   decos
-      // );
       if (decos.length > 0) {
         this.createDecorations(state);
         return this;

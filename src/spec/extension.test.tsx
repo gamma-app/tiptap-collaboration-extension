@@ -1,4 +1,8 @@
 import React from "react";
+import ReactDOM from "react-dom";
+import chai, { expect } from "chai";
+import doit from "chai-better-shallow-deep-equal";
+
 import userEvent from "@testing-library/user-event";
 import {
   cleanup,
@@ -12,6 +16,8 @@ import { Editor, EditorContent } from "@tiptap/react";
 import ReactTestUtils from "react-dom/test-utils";
 import { useTestEditor } from "../useTestEditor";
 import { EditorView } from "prosemirror-view";
+// @ts-ignore
+chai.use(doit);
 
 EditorView.prototype.updateState = function updateState(state) {
   if (!this.docView) return; // This prevents the matchesNode error on hot reloads
@@ -27,7 +33,20 @@ let RemoteEditor: React.FC<any> = null;
 let localEditorInstance: Editor = null;
 let remoteEditorInstance: Editor = null;
 let ydoc: Y.Doc = null;
+let container;
+
 beforeEach(() => {
+  container = document.createElement("div");
+  document.body.appendChild(container);
+});
+
+afterEach(() => {
+  document.body.removeChild(container);
+  container = null;
+});
+
+beforeEach(() => {
+  console.log("new ydoc");
   ydoc = new Y.Doc();
   RemoteEditor = ({
     instance = "remote",
@@ -63,10 +82,9 @@ beforeEach(() => {
   };
 });
 
-afterEach(() => {
-  cleanup();
-  remoteEditorInstance = null;
-  localEditorInstance = null;
+afterEach(async () => {
+  console.log("after each");
+  await cleanup();
 });
 
 describe("local editor", () => {
@@ -81,23 +99,24 @@ describe("local editor", () => {
           ydoc={ydoc}
           onUpdate={(d) => (decos = d)}
           content={content}
-        />
+        />,
+        container
       );
     });
     await sleep();
   });
 
   it("renders with or without a name", () => {
-    expect(localEditor.queryByText("block 1")).toHaveTextContent("block 1");
+    expect(localEditor.queryByText("block 1").textContent).to.equal("block 1");
   });
 
   it("creates a decoration when adding an annotation at beginning", async () => {
-    act(() => {
+    await act(() => {
       localEditorInstance.commands.setTextSelection(4);
       localEditorInstance.commands.addAnnotation("comment 1");
     });
-    expect(localEditor.queryByText("block 1")).toHaveTextContent("block 1");
-    expect(decos[0]).toMatchObject({
+    expect(localEditor.queryByText("block 1").textContent).to.equal("block 1");
+    expect(decos[0]).to.shallowDeepEqual({
       decoration: {
         from: 3,
         to: 12,
@@ -111,12 +130,12 @@ describe("local editor", () => {
   });
 
   it("creates a decoration when adding an annotation in middle", async () => {
-    act(() => {
+    await act(() => {
       localEditorInstance.commands.setTextSelection(6);
       localEditorInstance.commands.addAnnotation("comment 1");
     });
-    expect(localEditor.queryByText("block 1")).toHaveTextContent("block 1");
-    expect(decos[0]).toMatchObject({
+    expect(localEditor.queryByText("block 1").textContent).to.equal("block 1");
+    expect(decos[0]).to.shallowDeepEqual({
       decoration: {
         from: 3,
         to: 12,
@@ -130,12 +149,12 @@ describe("local editor", () => {
   });
 
   it("creates a decoration when adding an annotation at end", async () => {
-    act(() => {
+    await act(() => {
       localEditorInstance.commands.setTextSelection(11);
       localEditorInstance.commands.addAnnotation("comment 1");
     });
-    expect(localEditor.queryByText("block 1")).toHaveTextContent("block 1");
-    expect(decos[0]).toMatchObject({
+    expect(localEditor.queryByText("block 1").textContent).to.eql("block 1");
+    expect(decos[0]).to.shallowDeepEqual({
       decoration: {
         from: 3,
         to: 12,
@@ -149,16 +168,18 @@ describe("local editor", () => {
   });
 
   it("moves decoration if adding content before", async () => {
-    act(() => {
+    await act(() => {
       localEditorInstance.commands.setTextSelection(4);
       localEditorInstance.commands.addAnnotation("comment 1");
       localEditorInstance.commands.setTextSelection(2);
       localEditorInstance.commands.insertContent("hello");
     });
-    expect(localEditor.queryByText("block 1")).toHaveTextContent("block 1");
+    expect(localEditor.queryByText("block 1").textContent).to.eql("block 1");
     console.log();
-    expect(localEditorInstance.getHTML()).toBe(`<h1>hhello</h1><p>block 1</p>`);
-    expect(decos[0]).toMatchObject({
+    expect(localEditorInstance.getHTML()).to.eql(
+      `<h1>hhello</h1><p>block 1</p>`
+    );
+    expect(decos[0]).to.shallowDeepEqual({
       decoration: {
         from: 8,
         to: 17,
@@ -172,15 +193,17 @@ describe("local editor", () => {
   });
 
   it("expands decoration if adding content in between", async () => {
-    act(() => {
+    await act(() => {
       localEditorInstance.commands.setTextSelection(4);
       localEditorInstance.commands.addAnnotation("comment 1");
       localEditorInstance.commands.setTextSelection(6);
       localEditorInstance.commands.insertContent("oo");
     });
-    expect(localEditor.queryByText("blooock 1")).toHaveTextContent("blooock 1");
-    expect(localEditorInstance.getHTML()).toBe(`<h1>h</h1><p>blooock 1</p>`);
-    expect(decos[0]).toMatchObject({
+    expect(localEditor.queryByText("blooock 1").textContent).to.eql(
+      "blooock 1"
+    );
+    expect(localEditorInstance.getHTML()).to.eql(`<h1>h</h1><p>blooock 1</p>`);
+    expect(decos[0]).to.shallowDeepEqual({
       decoration: {
         from: 3,
         to: 14,
@@ -194,15 +217,17 @@ describe("local editor", () => {
   });
 
   it("puts the decoration on the previous block when splitting block in middle", async () => {
-    act(() => {
+    await act(() => {
       localEditorInstance.commands.setTextSelection(4);
       localEditorInstance.commands.addAnnotation("comment 1");
       localEditorInstance.commands.setTextSelection(6);
       localEditorInstance.commands.insertContent("oo");
     });
-    expect(localEditor.queryByText("blooock 1")).toHaveTextContent("blooock 1");
-    expect(localEditorInstance.getHTML()).toBe(`<h1>h</h1><p>blooock 1</p>`);
-    expect(decos[0]).toMatchObject({
+    expect(localEditor.queryByText("blooock 1").textContent).to.eql(
+      "blooock 1"
+    );
+    expect(localEditorInstance.getHTML()).to.eql(`<h1>h</h1><p>blooock 1</p>`);
+    expect(decos[0]).to.shallowDeepEqual({
       decoration: {
         from: 3,
         to: 14,
@@ -215,25 +240,25 @@ describe("local editor", () => {
     });
   });
 
-  it.only("splitting block and backspacing", async () => {
-    // localEditorInstance.on("transaction", ({ editor, transaction }) => {
-    //   console.log("on transaction", JSON.stringify(transaction.meta));
-    // });
-    act(async () => {
+  it("splitting block", async () => {
+    await act(async () => {
       localEditorInstance.commands.setTextSelection(4);
       localEditorInstance.commands.addAnnotation("comment 1");
       localEditorInstance.commands.setTextSelection(6);
       const node = await localEditor.findByText("block 1");
-      userEvent.type(node, `{enter}`);
-
-      // fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+      fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
     });
+    // let other transactions go through
+    await sleep();
 
     // console.log(localEditorInstance.getHTML());
     console.log("decos", decos);
-    // expect(localEditor.queryByText("blooock 1")).toHaveTextContent("blooock 1");
-    // expect(localEditorInstance.getHTML()).toBe(`<h1>h</h1><p>blooock 1</p>`);
-    expect(decos[0]).toMatchObject({
+    expect(localEditor.queryByText("bl").textContent).to.equal("bl");
+    expect(localEditor.queryByText("ock 1").textContent).to.equal("ock 1");
+    expect(localEditorInstance.getHTML()).to.equal(
+      `<h1>h</h1><p>bl</p><p>ock 1</p>`
+    );
+    expect(decos[0]).to.shallowDeepEqual({
       decoration: {
         from: 3,
         to: 7,
@@ -243,6 +268,291 @@ describe("local editor", () => {
           },
         },
       },
+    });
+  });
+
+  it("splitting block and backspacing", async () => {
+    await act(async () => {
+      localEditorInstance.commands.setTextSelection(4);
+      localEditorInstance.commands.addAnnotation("comment 1");
+      localEditorInstance.commands.setTextSelection(6);
+
+      const node = await localEditor.findByText("block 1");
+
+      fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+      localEditorInstance.commands.setTextSelection(8);
+
+      const node2 = await localEditor.findByText("ock 1");
+      fireEvent.keyDown(node2, {
+        key: "Backspace",
+        code: "Backspace",
+        charCode: 8,
+      });
+    });
+    // let other transactions go through
+
+    await sleep();
+    expect(localEditor.queryByText("block 1").textContent).to.equal("block 1");
+    expect(localEditorInstance.getHTML()).to.equal(`<h1>h</h1><p>block 1</p>`);
+    // deco should be joined back
+    expect(decos[0]).to.shallowDeepEqual({
+      decoration: {
+        from: 3,
+        to: 12,
+        type: {
+          spec: {
+            data: "comment 1",
+          },
+        },
+      },
+    });
+  });
+
+  it("splitting block and deleting", async () => {
+    await act(async () => {
+      localEditorInstance.commands.setTextSelection(4);
+      localEditorInstance.commands.addAnnotation("comment 1");
+      localEditorInstance.commands.setTextSelection(6);
+
+      const node = await localEditor.findByText("block 1");
+
+      fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+      localEditorInstance.commands.setTextSelection(6);
+
+      const node2 = await localEditor.findByText("ock 1");
+      fireEvent.keyDown(node2, {
+        key: "Delete",
+        code: "Delete",
+        charCode: 46,
+      });
+    });
+    // let other transactions go through
+
+    await sleep();
+    expect(localEditor.queryByText("block 1").textContent).to.equal("block 1");
+    expect(localEditorInstance.getHTML()).to.equal(`<h1>h</h1><p>block 1</p>`);
+    // deco should be joined back
+    expect(decos[0]).to.shallowDeepEqual({
+      decoration: {
+        from: 3,
+        to: 12,
+        type: {
+          spec: {
+            data: "comment 1",
+          },
+        },
+      },
+    });
+  });
+});
+
+describe("multiple comments", () => {
+  let localEditor: RenderResult = null;
+  let decos = [];
+  const content = `<h1>h</h1><p>block 1</p><p>block 2</p>`;
+
+  beforeEach(async () => {
+    act(() => {
+      localEditor = render(
+        <LocalEditor
+          ydoc={ydoc}
+          onUpdate={(d) => (decos = d)}
+          content={content}
+        />,
+        container
+      );
+    });
+    await sleep();
+  });
+
+  it("adds comment second block", async () => {
+    await act(async () => {
+      localEditorInstance.commands.setTextSelection(13);
+      localEditorInstance.commands.addAnnotation("comment 2");
+      localEditorInstance.commands.setTextSelection(6);
+
+      const node = await localEditor.findByText("block 1");
+
+      fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+    });
+    // let other transactions go through
+
+    await sleep();
+    console.log(localEditorInstance.getHTML());
+    // expect(localEditorInstance.getHTML()).to.equal(`<h1>h</h1><p>bl</p><p>ock 1</p><p>block 2</p>`);
+    // deco should be joined back
+    expect(decos[0]).to.shallowDeepEqual({
+      decoration: {
+        from: 14,
+        to: 23,
+        type: {
+          spec: {
+            data: "comment 2",
+          },
+        },
+      },
+    });
+  });
+
+  it("multiple comments", async () => {
+    await act(async () => {
+      localEditorInstance.commands.setTextSelection(6);
+      localEditorInstance.commands.addAnnotation("comment 1");
+      await sleep();
+      localEditorInstance.commands.setTextSelection(14);
+      localEditorInstance.commands.addAnnotation("comment 2");
+    });
+
+    await sleep();
+    expect(decos[0]).to.shallowDeepEqual({
+      decoration: {
+        from: 3,
+        to: 12,
+        type: {
+          spec: {
+            data: "comment 1",
+          },
+        },
+      },
+    });
+    expect(decos[1]).to.shallowDeepEqual({
+      decoration: {
+        from: 12,
+        to: 21,
+        type: {
+          spec: {
+            data: "comment 2",
+          },
+        },
+      },
+    });
+  });
+
+  describe("split block - ENTER", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        localEditorInstance.commands.setTextSelection(6);
+        localEditorInstance.commands.addAnnotation("comment 1");
+        await sleep();
+        localEditorInstance.commands.setTextSelection(14);
+        localEditorInstance.commands.addAnnotation("comment 2");
+        await sleep();
+      });
+    });
+    it("two comments split block in middle", async () => {
+      await act(async () => {
+        localEditorInstance.commands.setTextSelection(6);
+        const node = await localEditor.findByText("block 1");
+
+        fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+      });
+      // let other transactions go through
+
+      await sleep();
+      console.log(localEditorInstance.getHTML());
+      expect(localEditorInstance.getHTML()).to.equal(
+        `<h1>h</h1><p>bl</p><p>ock 1</p><p>block 2</p>`
+      );
+      // deco should be joined back
+      expect(decos[0]).to.shallowDeepEqual({
+        decoration: {
+          from: 3,
+          to: 7,
+          type: {
+            spec: {
+              data: "comment 1",
+            },
+          },
+        },
+      });
+      expect(decos[1]).to.shallowDeepEqual({
+        decoration: {
+          from: 14,
+          to: 23,
+          type: {
+            spec: {
+              data: "comment 2",
+            },
+          },
+        },
+      });
+    });
+    it("two comments split block in middle", async () => {
+      await act(async () => {
+        localEditorInstance.commands.setTextSelection(6);
+        const node = await localEditor.findByText("block 1");
+
+        fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+      });
+      // let other transactions go through
+
+      await sleep();
+      console.log(localEditorInstance.getHTML());
+      expect(localEditorInstance.getHTML()).to.equal(
+        `<h1>h</h1><p>bl</p><p>ock 1</p><p>block 2</p>`
+      );
+      // deco should be joined back
+      expect(decos[0]).to.shallowDeepEqual({
+        decoration: {
+          from: 3,
+          to: 7,
+          type: {
+            spec: {
+              data: "comment 1",
+            },
+          },
+        },
+      });
+      expect(decos[1]).to.shallowDeepEqual({
+        decoration: {
+          from: 14,
+          to: 23,
+          type: {
+            spec: {
+              data: "comment 2",
+            },
+          },
+        },
+      });
+    });
+
+    it("two comments split block in front", async () => {
+      await act(async () => {
+        localEditorInstance.commands.setTextSelection(4);
+        const node = await localEditor.findByText("block 1");
+
+        fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+      });
+      // let other transactions go through
+
+      await sleep();
+      console.log(localEditorInstance.getHTML());
+      expect(localEditorInstance.getHTML()).to.equal(
+        `<h1>h</h1><p></p><p>block 1</p><p>block 2</p>`
+      );
+      // deco should be joined back
+      expect(decos[0]).to.shallowDeepEqual({
+        decoration: {
+          from: 5,
+          to: 14,
+          type: {
+            spec: {
+              data: "comment 1",
+            },
+          },
+        },
+      });
+      expect(decos[1]).to.shallowDeepEqual({
+        decoration: {
+          from: 14,
+          to: 23,
+          type: {
+            spec: {
+              data: "comment 2",
+            },
+          },
+        },
+      });
     });
   });
 });
