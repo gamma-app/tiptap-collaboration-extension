@@ -40,7 +40,9 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test --transformIgnorePatterns \"node_modules/(?!(y-protocols))/\"",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "test-server": "webpack serve",
+    "open-tests": "open ./test.html"
   },
   "eslintConfig": {
     "extends": [
