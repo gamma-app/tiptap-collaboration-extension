@@ -17,7 +17,7 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
 
   const editor = useTestEditor({
     ydoc,
-    content: `<h1>h</h1><p>block 1</p><p>block 2</p>`,
+    content: `<h1>h</h1><p>block 1</p><p>block 2</p><p>block 3</p>`,
     instance,
     color,
     onUpdate,
@@ -35,15 +35,13 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
       setSelection(editor.state.selection);
     });
     async function doit() {
-      // editor.commands.clearAnnotations();
+      // return;
+      editor.commands.clearAnnotations();
       await sleep();
-      editor.commands.setTextSelection(6);
+      editor.commands.setTextSelection(14);
       await sleep();
       editor.commands.addAnnotation("c1");
-      await sleep();
-
-      editor.commands.setTextSelection(14);
-      editor.commands.addAnnotation("c2");
+      return;
     }
     setTimeout(() => doit(), 500);
   }, [editor, instance]);

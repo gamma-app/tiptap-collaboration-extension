@@ -72,23 +72,29 @@ export const KeymapOverride = Extension.create({
         () => commands.deleteSelection(),
         ({ tr, state }) => {
           const posAfter = tr.selection.$from.after();
-          const node = state.doc.nodeAt(posAfter);
+          console.log("JOIN FORWARD POS AFTER", {
+            posBefore,
+            sel: tr.selection,
+          });
+          // do join
           const joinForward = commands.joinForward();
-          const { parent: nodeEnd, parentOffset } = tr.selection.$from;
-          const matches = findChildren(tr.doc, (node) => node === nodeEnd);
+          // selection is now within the joined nodes
+          const { parent: joinedNode } = tr.selection.$from;
+          const matches = findChildren(tr.doc, (node) => node === joinedNode);
 
           if (joinForward && matches) {
-            console.log("join backward debug", {
-              node,
-              nodeEnd,
-              matches,
-            });
             tr.setMeta("JOIN_FORWARD", {
-              node,
-              nodeEnd,
+              nodeEnd: joinedNode,
               joinedPos: matches[0].pos,
               joinedNode: matches[0].node,
             });
+            console.log("JOIN FORWARD ", {
+              joinedPos: matches[0].pos,
+              joinedNode: matches[0].node,
+            });
+            setTimeout(() => {
+              this.editor.commands.refreshDecorations();
+            }, 0);
           }
           return joinForward;
         },

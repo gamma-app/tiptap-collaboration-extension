@@ -219,11 +219,18 @@ export class AnnotationState {
   }
 
   handleLocalChange(transaction: Transaction, state: EditorState): this {
-    return this;
-
     const splitBlockAtStart = transaction.getMeta("SPLIT_BLOCK_START");
     const joinBackward = transaction.getMeta("JOIN_BACKWARD");
     const joinForward = transaction.getMeta("JOIN_FORWARD");
+
+    if (!splitBlockAtStart && !joinBackward && !joinForward) {
+      // nothing funky, allow decoration mapping to happen
+      this.decorations = this.decorations.map(
+        transaction.mapping,
+        transaction.doc
+      );
+    }
+    return this;
     // console.log("in local change", transaction);
     return this;
     if (splitBlockAtStart) {
