@@ -42,10 +42,6 @@ export const KeymapOverride = Extension.create({
         () => commands.undoInputRule(),
         () => commands.deleteSelection(),
         ({ tr, state }) => {
-          console.log("handling backspace", {
-            selection: tr.selection,
-            before: tr.selection.$from.before(),
-          });
           const currentDecorationPos = tr.selection.$from.before();
           const joinBackward = commands.joinBackward();
 
@@ -54,7 +50,7 @@ export const KeymapOverride = Extension.create({
 
           if (joinBackward && matches) {
             const newDecorationPos = matches[0].pos;
-            tr.setMeta("JOIN_BACKWARD", {
+            tr.setMeta("JOIN_BLOCK", {
               currentDecorationPos,
               newDecorationPos,
             });
@@ -79,7 +75,7 @@ export const KeymapOverride = Extension.create({
           const matches = findChildren(tr.doc, (node) => node === joinedNode);
 
           if (joinForward && matches) {
-            tr.setMeta("JOIN_FORWARD", {
+            tr.setMeta("JOIN_BLOCK", {
               currentDecorationPos,
               newDecorationPos: matches[0].pos,
             });

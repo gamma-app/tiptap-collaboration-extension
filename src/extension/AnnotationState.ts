@@ -29,8 +29,6 @@ export class AnnotationState {
 
   color: string;
 
-  domNodeMap: any = {};
-
   constructor(options: AnnotationStateOptions) {
     this.options = options;
     this.color = options.color;
@@ -250,120 +248,27 @@ export class AnnotationState {
 
   handleLocalChange(transaction: Transaction, state: EditorState): this {
     const splitBlockAtStart = transaction.getMeta("SPLIT_BLOCK_START");
-    const joinBackward = transaction.getMeta("JOIN_BACKWARD");
-    const joinForward = transaction.getMeta("JOIN_FORWARD");
+    const joinBlock = transaction.getMeta("JOIN_BLOCK");
 
-    if (joinForward) {
+    if (joinBlock) {
       return this.handleLocalJoinBlock(
-        joinForward.currentDecorationPos,
-        joinForward.newDecorationPos,
+        joinBlock.currentDecorationPos,
+        joinBlock.newDecorationPos,
         state
       );
     }
 
-    if (joinBackward) {
-      return this.handleLocalJoinBlock(
-        joinBackward.currentDecorationPos,
-        joinBackward.newDecorationPos,
-        state
-      );
-
-    }
-
-    if (!splitBlockAtStart && !joinBackward && !joinForward) {
-      // nothing funky, allow decoration mapping to happen
-      this.decorations = this.decorations.map(
-        transaction.mapping,
-        transaction.doc
-      );
-    }
-    return this;
-    // console.log("in local change", transaction);
-    return this;
     if (splitBlockAtStart) {
-      console.log(
-        `%c [${this.options.instance}] LOCAL CHANGE IS split block`,
-        `color: ${this.color}`,
-        splitBlockAtStart
-      );
-
-      if (splitBlockAtStart.parentOffset === 0) {
-        const ranges = [
-          splitBlockAtStart.from - 1,
-          0,
-          splitBlockAtStart.offset,
-        ];
-        // transaction.mapping.appendMap();
-        this.decorations = this.decorations.map(
-          new Mapping([new StepMap(ranges)]),
-          transaction.doc
-        );
-        // can't create decorations at this point, need to wait until state
-        // this.createDecorations(state);
-        return this;
-      }
+      // splitting block
+      // refreshDecorations call in KeymapOverride will handle updating
       return this;
-      // check split at decoration
-      const decos = this.decorations.find(
-        splitBlockAtStart.from,
-        splitBlockAtStart.from
-      );
-      if (decos.length > 0) {
-        // split inbetween the decoration
-        // recreate from YMap
-        console.log("recreating decorations");
-        this.createDecorations(state);
-        return this;
-      }
-    } else if (joinBackward) {
-      console.log(
-        `%c [${this.options.instance}] LOCAL CHANGE IS join backward`,
-        `color: ${this.color}`,
-        joinBackward,
-        this.options.map.toJSON()
-      );
-
-      const decos = this.decorations.find(
-        joinBackward.joinedPos,
-        joinBackward.joinedPos + joinBackward.joinedNode.nodeSize
-      );
-      if (decos.length > 0) {
-        this.createDecorations(state);
-        return this;
-      }
-    } else if (joinForward) {
-      // console.log(
-      //   `%c [${this.options.instance}] LOCAL CHANGE IS join forward`,
-      //   `color: ${this.color}`,
-      //   joinForward
-      // );
-
-      const decos = this.decorations.find(
-        joinForward.joinedPos,
-        joinForward.joinedPos + joinForward.joinedNode.nodeSize
-      );
-      // console.log(
-      //   "join forward finding ",
-      //   [
-      //     joinForward.joinedPos,
-      //     joinForward.joinedPos + joinForward.joinedNode.nodeSize,
-      //   ],
-      //   decos
-      // );
-      if (decos.length > 0) {
-        this.createDecorations(state);
-        return this;
-      }
     }
 
-    // console.log(
-    //   `%c [${this.options.instance}] LOCAL CHANGE no special block stuff, mapping decorations`,
-    //   `color: ${this.color}`
-    // );
+    // no special cases, allow decoration mapping to happen
     this.decorations = this.decorations.map(
       transaction.mapping,
       transaction.doc
     );
-    return this;
+    return this
   }
 }
