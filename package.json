@@ -73,7 +73,6 @@
     "jasmine-expect": "^5.0.0",
     "karma": "^6.3.9",
     "source-map-support": "^0.5.20",
-    "webpack-cli": "^4.9.1",
-    "webpack-dev-server": "^4.5.0"
+    "webpack-cli": "^4.9.1"
   }
 }

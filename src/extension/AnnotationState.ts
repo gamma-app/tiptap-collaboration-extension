@@ -67,14 +67,14 @@ export class AnnotationState {
     }
     const { map } = this.options;
     const { pos, data } = action;
-    const absoluteFrom = absolutePositionToRelativePosition(
+    const relativePos = absolutePositionToRelativePosition(
       pos,
       type,
       binding.mapping
     );
     const randomId = this.randomId();
     map.set(randomId, {
-      pos: absoluteFrom,
+      pos: relativePos,
       data,
     });
   }
@@ -128,19 +128,6 @@ export class AnnotationState {
       }
 
       const node = state.doc.resolve(pos);
-      // console.log(
-      //   `%c [${this.options.instance}] createDecorations Decoration.widget()`,
-      //   `color: ${this.color}`,
-
-      //   {
-      //     key,
-      //     // doc,
-      //     annotation,
-      //     from: pos,
-      //     to: pos + node.nodeAfter?.nodeSize || 0,
-      //   }
-      // );
-
       decorations.push(
         Decoration.node(
           pos,
@@ -148,6 +135,7 @@ export class AnnotationState {
           // attrs
           {},
           {
+            id: key,
             data: annotation.data,
             destroy(node) {
               console.log("DESTROYED!", node);
@@ -218,10 +206,67 @@ export class AnnotationState {
     return this.handleLocalChange(transaction, state);
   }
 
+  /**
+   * Updates decoration position to the joined block
+   * NextBlock
+   * @param transaction
+   * @param state
+   * @returns
+   */
+  handleLocalJoinForward(
+    nextBlockPos: number,
+    joinedBlockPos: number,
+    state: EditorState
+  ): this {
+    // update decoration position
+    const ystate = ySyncPluginKey.getState(state);
+    const { type, binding } = ystate;
+    if (!ystate.binding) {
+      return this;
+    }
+    const { map } = this.options;
+    const decorationsToUpdate = this.decorations.find(
+      nextBlockPos,
+      nextBlockPos
+    );
+    console.log(
+      `found current decorations at ${nextBlockPos}`,
+      decorationsToUpdate
+    );
+    if (decorationsToUpdate.length === 0) {
+      console.log("handling local join forward");
+      // TODO figure out if we need to do decorations.map here
+      return this;
+    }
+
+    decorationsToUpdate.forEach((deco) => {
+      const relativePos = absolutePositionToRelativePosition(
+        joinedBlockPos,
+        type,
+        binding.mapping
+      );
+      const id = deco.spec.id;
+      const existing = map.get(deco.spec.id);
+      map.set(id, {
+        ...existing,
+        pos: relativePos,
+      });
+    });
+    return this;
+  }
+
   handleLocalChange(transaction: Transaction, state: EditorState): this {
     const splitBlockAtStart = transaction.getMeta("SPLIT_BLOCK_START");
     const joinBackward = transaction.getMeta("JOIN_BACKWARD");
     const joinForward = transaction.getMeta("JOIN_FORWARD");
+
+    if (joinForward) {
+      return this.handleLocalJoinForward(
+        joinForward.currentDecorationPos,
+        joinForward.newDecorationPos,
+        state
+      );
+    }
 
     if (!splitBlockAtStart && !joinBackward && !joinForward) {
       // nothing funky, allow decoration mapping to happen
