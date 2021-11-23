@@ -251,14 +251,12 @@ describe("local editor", () => {
     // let other transactions go through
     await sleep();
 
-    // console.log(localEditorInstance.getHTML());
-    console.log("decos", decos);
     expect(localEditor.queryByText("bl").textContent).to.equal("bl");
     expect(localEditor.queryByText("ock 1").textContent).to.equal("ock 1");
     expect(localEditorInstance.getHTML()).to.equal(
       `<h1>h</h1><p>bl</p><p>ock 1</p>`
     );
-    await sleep()
+    await sleep();
     expect(decos[0]).to.shallowDeepEqual({
       decoration: {
         from: 3,
@@ -642,6 +640,166 @@ describe("multiple comments", () => {
           key: "Delete",
           code: "Delete",
           charCode: 46,
+        });
+      });
+      await sleep();
+
+      expect(localEditorInstance.getHTML()).to.equal(
+        `<h1>h</h1><p>block 1block 2</p><p>block 3</p>`
+      );
+      // deco should be joined back
+      expect(decos[0]).to.shallowDeepEqual({
+        decoration: {
+          from: 3,
+          to: 19,
+          type: {
+            spec: {
+              data: "comment 1",
+            },
+          },
+        },
+      });
+
+      expect(decos[1]).to.shallowDeepEqual({
+        decoration: {
+          from: 19,
+          to: 28,
+          type: {
+            spec: {
+              data: "comment 2",
+            },
+          },
+        },
+      });
+    });
+  });
+
+  describe("join block - BACKSPACE", () => {
+    beforeEach(async () => {
+      await act(async () => {
+        localEditorInstance.commands.setTextSelection(14);
+        localEditorInstance.commands.addAnnotation("comment 1");
+        await sleep();
+      });
+    });
+
+    it("joins current non-comment block to previous comment block", async () => {
+      await act(async () => {
+        localEditorInstance.commands.setTextSelection(22);
+
+        const node = await localEditor.findByText("block 2");
+        fireEvent.keyDown(node, {
+          key: "Backspace",
+          code: "Backspace",
+          charCode: 8,
+        });
+      });
+      await sleep();
+
+      expect(localEditorInstance.getHTML()).to.equal(
+        `<h1>h</h1><p>block 1</p><p>block 2block 3</p>`
+      );
+      // deco should be joined back
+      expect(decos[0]).to.shallowDeepEqual({
+        decoration: {
+          from: 12,
+          to: 28,
+          type: {
+            spec: {
+              data: "comment 1",
+            },
+          },
+        },
+      });
+    });
+
+    it("joins current comment block with previous block", async () => {
+      await act(async () => {
+        localEditorInstance.commands.setTextSelection(13);
+
+        const node = await localEditor.findByText("block 1");
+        fireEvent.keyDown(node, {
+          key: "Backspace",
+          code: "Backspace",
+          charCode: 8,
+        })
+      });
+      await sleep();
+
+      expect(localEditorInstance.getHTML()).to.equal(
+        `<h1>h</h1><p>block 1block 2</p><p>block 3</p>`
+      );
+      // deco should be joined back
+      expect(decos[0]).to.shallowDeepEqual({
+        decoration: {
+          from: 3,
+          to: 19,
+          type: {
+            spec: {
+              data: "comment 1",
+            },
+          },
+        },
+      });
+    });
+
+    it("joins current comment block with previous block also a comment", async () => {
+      await act(async () => {
+        localEditorInstance.commands.setTextSelection(22);
+        localEditorInstance.commands.addAnnotation("comment 2");
+        await sleep();
+
+        localEditorInstance.commands.setTextSelection(22);
+        const node = await localEditor.findByText("block 1");
+        fireEvent.keyDown(node, {
+          key: "Backspace",
+          code: "Backspace",
+          charCode: 8,
+        });
+      });
+      await sleep();
+
+      expect(localEditorInstance.getHTML()).to.equal(
+        `<h1>h</h1><p>block 1</p><p>block 2block 3</p>`
+      );
+      // deco should be joined back
+      expect(decos[0]).to.shallowDeepEqual({
+        decoration: {
+          from: 12,
+          to: 28,
+          type: {
+            spec: {
+              data: "comment 1",
+            },
+          },
+        },
+      });
+
+      expect(decos[1]).to.shallowDeepEqual({
+        decoration: {
+          from: 12,
+          to: 28,
+          type: {
+            spec: {
+              data: "comment 2",
+            },
+          },
+        },
+      });
+    });
+
+    it("joins next comment block with previous non comment block and a farther down comment block is unaffected", async () => {
+      await act(async () => {
+        localEditorInstance.commands.setTextSelection(22);
+        localEditorInstance.commands.addAnnotation("comment 2");
+        await sleep();
+
+        localEditorInstance.commands.setTextSelection(13);
+        const node = await localEditor.findByText("block 1");
+        fireEvent.keyDown(node, {
+          key: "Backspace",
+          code: "Backspace",
+          charCode: 8,
         });
       });
       await sleep();

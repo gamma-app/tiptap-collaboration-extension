@@ -42,25 +42,25 @@ export const KeymapOverride = Extension.create({
         () => commands.undoInputRule(),
         () => commands.deleteSelection(),
         ({ tr, state }) => {
-          console.log("handling backspace");
-          const { parent: node } = tr.selection.$from;
+          console.log("handling backspace", {
+            selection: tr.selection,
+            before: tr.selection.$from.before(),
+          });
+          const currentDecorationPos = tr.selection.$from.before();
           const joinBackward = commands.joinBackward();
 
-          const { parent: nodeEnd, parentOffset, pos } = tr.selection.$from;
+          const { parent: nodeEnd } = tr.selection.$from;
           const matches = findChildren(tr.doc, (node) => node === nodeEnd);
 
           if (joinBackward && matches) {
-            console.log("join backward debug", {
-              node,
-              nodeEnd,
-              matches,
-            });
+            const newDecorationPos = matches[0].pos;
             tr.setMeta("JOIN_BACKWARD", {
-              node,
-              nodeEnd,
-              joinedPos: matches[0].pos,
-              joinedNode: matches[0].node,
+              currentDecorationPos,
+              newDecorationPos,
             });
+            setTimeout(() => {
+              this.editor.commands.refreshDecorations();
+            }, 0);
           }
           return joinBackward;
         },
@@ -71,7 +71,6 @@ export const KeymapOverride = Extension.create({
       this.editor.commands.first(({ commands }) => [
         () => commands.deleteSelection(),
         ({ tr, state }) => {
-          //
           const currentDecorationPos = tr.selection.$from.after();
           // do join
           const joinForward = commands.joinForward();

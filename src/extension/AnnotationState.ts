@@ -189,16 +189,9 @@ export class AnnotationState {
     // Use Y.js to update positions
     const ystate = ySyncPluginKey.getState(state);
 
-    console.log("is remote change", ystate.isChangeOrigin);
+    // always re-render decorations for remote changes
     if (ystate.isChangeOrigin) {
-      // REMOTE CHANGE
-      // console.log(
-      //   `%c [${this.options.instance}] isChangeOrigin: true → createDecorations`,
-      //   `color: ${this.color}`
-      // );
-      // create decorations off YMap RelativeChange
       this.createDecorations(state);
-
       return this;
     }
 
@@ -213,8 +206,8 @@ export class AnnotationState {
    * @param state
    * @returns
    */
-  handleLocalJoinForward(
-    nextBlockPos: number,
+  handleLocalJoinBlock(
+    currentBlockPos: number,
     joinedBlockPos: number,
     state: EditorState
   ): this {
@@ -226,11 +219,11 @@ export class AnnotationState {
     }
     const { map } = this.options;
     const decorationsToUpdate = this.decorations.find(
-      nextBlockPos,
-      nextBlockPos
+      currentBlockPos,
+      currentBlockPos
     );
     console.log(
-      `found current decorations at ${nextBlockPos}`,
+      `found current decorations at ${currentBlockPos}`,
       decorationsToUpdate
     );
     if (decorationsToUpdate.length === 0) {
@@ -261,11 +254,20 @@ export class AnnotationState {
     const joinForward = transaction.getMeta("JOIN_FORWARD");
 
     if (joinForward) {
-      return this.handleLocalJoinForward(
+      return this.handleLocalJoinBlock(
         joinForward.currentDecorationPos,
         joinForward.newDecorationPos,
         state
       );
+    }
+
+    if (joinBackward) {
+      return this.handleLocalJoinBlock(
+        joinBackward.currentDecorationPos,
+        joinBackward.newDecorationPos,
+        state
+      );
+
     }
 
     if (!splitBlockAtStart && !joinBackward && !joinForward) {
