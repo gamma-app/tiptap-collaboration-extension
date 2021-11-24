@@ -14,7 +14,6 @@ import {
   UpdateAnnotationAction,
 } from "./extension";
 import { AnnotationPluginKey } from "./AnnotationPlugin";
-import { AnnotationItem } from "./AnnotationItem";
 import { CreateDecorationsAction, MoveAnnotationsAction } from ".";
 
 export interface AnnotationStateOptions {
@@ -67,18 +66,9 @@ export class AnnotationState {
   }
 
   addAnnotation(action: AddAnnotationAction, state: EditorState) {
-    const ystate = ySyncPluginKey.getState(state);
-    const { type, binding } = ystate;
-    if (!ystate.binding) {
-      return this;
-    }
     const { map } = this.options;
     const { pos, data } = action;
-    const relativePos = absolutePositionToRelativePosition(
-      pos,
-      type,
-      binding.mapping
-    );
+    const relativePos = this.absToRel(state, pos);
     const randomId = this.randomId();
     map.set(randomId, {
       pos: relativePos,
@@ -132,12 +122,6 @@ export class AnnotationState {
     return this;
   }
 
-  annotationsAt(position: number) {
-    return this.decorations.find(position, position).map((decoration) => {
-      return new AnnotationItem(decoration);
-    });
-  }
-
   createDecorations(state: EditorState) {
     const { map } = this.options;
     const ystate = ySyncPluginKey.getState(state);
@@ -146,8 +130,8 @@ export class AnnotationState {
     }
     const { doc, type, binding } = ystate;
     const decorations: Decoration[] = [];
+    const annotations: AnnotationData[] = [];
 
-    this.annotations = [];
     map.forEach((annotation, key) => {
       const pos = relativePositionToAbsolutePosition(
         doc,
@@ -187,12 +171,9 @@ export class AnnotationState {
         }
       );
 
-      this.annotations.push({
-        data: annotation.data,
+      annotations.push({
         id: key,
-        // pos,
-        // start,
-        // end,
+        data: annotation.data,
         relativePos: annotation.pos,
       });
       decorations.push(
@@ -214,6 +195,7 @@ export class AnnotationState {
     });
 
     this.decorations = DecorationSet.create(state.doc, decorations);
+    this.annotations = annotations;
     return this;
   }
 

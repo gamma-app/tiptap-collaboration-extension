@@ -9,7 +9,6 @@ import { MoveInstruction } from ".";
 import {
   ySyncPluginKey,
   relativePositionToAbsolutePosition,
-  absolutePositionToRelativePosition,
 } from "y-prosemirror";
 import { RelativePosition } from "yjs";
 
@@ -159,7 +158,6 @@ export const KeymapOverride = Extension.create({
         () => commands.deleteSelection(),
         ({ tr, state, view }) => {
           if (!view.endOfTextblock("backward")) {
-            console.log("BACKSPACE - not at beginning of text block");
             return false;
           }
           // delete backspace position
@@ -249,7 +247,6 @@ export const KeymapOverride = Extension.create({
         () => commands.deleteSelection(),
         ({ tr, state, view }) => {
           if (!view.endOfTextblock("forward")) {
-            console.log("DELETE - not at end of text block");
             return false;
           }
           //   delete pressed here

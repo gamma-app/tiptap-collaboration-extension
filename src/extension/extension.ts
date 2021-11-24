@@ -3,12 +3,10 @@
 import * as Y from "yjs";
 import { Extension } from "@tiptap/core";
 import { findParentNodeClosestToPos } from "prosemirror-utils";
-
 import {
   createAnnotationPlugin,
   AnnotationPluginKey,
 } from "./AnnotationPlugin";
-require("source-map-support").install();
 
 export interface AddAnnotationAction {
   type: "addAnnotation";
@@ -79,7 +77,7 @@ declare module "@tiptap/core" {
 
 const getMap = (doc: any) => doc.getMap("annotations") as Y.Map<any>;
 
-export const CollaborationAnnotation = Extension.create({
+export const AnnotationExtension = Extension.create({
   name: "annotation",
 
   defaultOptions: {
@@ -92,19 +90,10 @@ export const CollaborationAnnotation = Extension.create({
   } as AnnotationOptions,
 
   onCreate() {
-    const map = getMap(this.options.document);
-    if (this.options.instance === "editor1") {
-      // @ts-ignore
-      window["ymap"] = map;
-    }
-    map.observe((ev) => {
+    getMap(this.options.document).observe((ev) => {
       console.log(
         `%c[${this.options.instance}] map.observe updated → dispatching createDecorations`,
-        `color: ${this.options.color}`,
-
-        {
-          map: getMap(this.options.document).toJSON(),
-        }
+        `color: ${this.options.color}`
       );
 
       this.editor.commands.refreshDecorations();

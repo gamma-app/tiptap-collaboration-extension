@@ -15,6 +15,7 @@ export interface AnnotationPluginOptions {
 export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
   new Plugin({
     key: AnnotationPluginKey,
+
     state: {
       init() {
         return new AnnotationState({
@@ -33,12 +34,10 @@ export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
       decorations(state) {
         const { decorations, annotations } = this.getState(state);
 
-        // console.log("deco props", decorations.find());
         options.onUpdate(
           decorations.find().map((d) => new AnnotationItem(d)),
           annotations
         );
-        // options.onUpdate(decorations.find(), annotations);
 
         return decorations;
       },

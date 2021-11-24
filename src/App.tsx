@@ -23,7 +23,7 @@ export default function App() {
       </div>
       <div className="bottom">
         <h3>editor2 </h3>
-        {/* <Tiptap ydoc={ydoc} instance={"editor2"} color="cornflowerblue" /> */}
+        <Tiptap ydoc={ydoc} instance={"editor2"} color="cornflowerblue" />
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import Text from "@tiptap/extension-text";
 import Collaboration from "@tiptap/extension-collaboration";
 import Bold from "@tiptap/extension-bold";
 import Heading from "@tiptap/extension-heading";
-import CollaborationAnnotation from "./extension";
+import AnnotationExtension from "./extension";
 import { KeymapOverride } from "./extension/KeymapOverride";
 // @ts-ignore
 import applyDevTools from "prosemirror-dev-tools";
@@ -40,7 +40,7 @@ export const useTestEditor = ({
       Collaboration.configure({
         document: ydoc,
       }),
-      CollaborationAnnotation.configure({
+      AnnotationExtension.configure({
         document: ydoc,
         onUpdate: onUpdate,
         instance,
