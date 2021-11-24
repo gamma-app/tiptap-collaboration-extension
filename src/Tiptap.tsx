@@ -13,7 +13,7 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
   const [selection, setSelection] = useState<any>({});
 
   const onUpdate = (decos: any, annotations: any) => {
-    console.log(`%c [${instance}] on decos update`, `color: ${color}`, decos);
+    // console.log(`%c [${instance}] on decos update`, `color: ${color}`, decos);
     setComments(decos);
     setAnnotations(annotations);
   };
@@ -31,14 +31,13 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
     if (!editor || instance !== "editor1") return;
 
     editor.on("transaction", ({ editor, transaction }) => {
-      console.log(
-        `%c [${instance}] on transaction`,
-        `color: ${color}`,
-        transaction
-      );
+      // console.log(
+      //   `%c [${instance}] on transaction`,
+      //   `color: ${color}`,
+      //   transaction
+      // );
     });
     editor.on("selectionUpdate", ({ editor }) => {
-      console.log("selection update");
       setSelection(editor.state.selection);
     });
     async function doit() {
@@ -71,6 +70,7 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
             flexDirection: "row",
             alignItems: "center",
             marginTop: "10px",
+            marginBottom: "10px",
           }}
         >
           <button
@@ -83,30 +83,36 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
           </button>
           <button
             onClick={() => {
-              editor?.commands.enter();
-            }}
-          >
-            Enter
-          </button>
-          <button
-            onClick={() => {
               editor?.commands.refreshDecorations();
             }}
           >
             Refresh
           </button>
-          <div style={{ marginLeft: "10px " }}>{JSON.stringify(selection)}</div>
+          <div style={{ marginLeft: "10px " }}>{}</div>
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          <div>Selection</div>
+          <pre style={{ marginTop: 0 }}>{JSON.stringify(selection)}</pre>
         </div>
         <div style={{ marginBottom: 10 }}>
           <div>Decorations</div>
+
           {comments.map((c, idx) => {
-            return <div key={idx}>{JSON.stringify(c)}</div>;
+            return (
+              <pre style={{ marginTop: 0, marginBottom: 0 }} key={idx}>
+                {JSON.stringify(c)}
+              </pre>
+            );
           })}
         </div>
         <div>
           <div>Annotations</div>
           {annotations.map((c, idx) => {
-            return <div key={idx}>{JSON.stringify(c)}</div>;
+            return (
+              <pre style={{ marginTop: 0, marginBottom: 0 }} key={idx}>
+                {JSON.stringify(c)}
+              </pre>
+            );
           })}
         </div>
       </div>

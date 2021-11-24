@@ -26,7 +26,7 @@ EditorView.prototype.updateState = function updateState(state) {
 
 // sleep util
 const sleep: () => Promise<void> = () =>
-  new Promise((res) => requestAnimationFrame(() => res()));
+  new Promise((res) => setTimeout(() => res()));
 
 let LocalEditor: React.FC<any> = null;
 let RemoteEditor: React.FC<any> = null;

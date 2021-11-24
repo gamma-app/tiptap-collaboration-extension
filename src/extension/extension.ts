@@ -36,7 +36,7 @@ export interface DeleteAnnotationAction {
 }
 
 export type MoveInstruction = {
-  currPos: Y.RelativePosition;
+  id: string;
   newPos: number;
 };
 
@@ -99,7 +99,7 @@ export const CollaborationAnnotation = Extension.create({
     }
     map.observe((ev) => {
       console.log(
-        `%c [${this.options.instance}] map.observe updated → dispatching createDecorations`,
+        `%c[${this.options.instance}] map.observe updated → dispatching createDecorations`,
         `color: ${this.options.color}`,
 
         {

@@ -90,10 +90,6 @@ export class AnnotationState {
   }
 
   updateAnnotation(action: UpdateAnnotationAction) {
-    // console.log(
-    //   `%c [${this.options.instance}] update annotation`,
-    //   `color: ${this.color}`
-    // );
     const { map } = this.options;
 
     const annotation = map.get(action.id);
@@ -129,45 +125,21 @@ export class AnnotationState {
     return relativePositionToAbsolutePosition(doc, type, rel, binding.mapping);
   }
 
-  moveAnnotation(
-    state: EditorState,
-    currPos: Y.RelativePosition,
-    newPos: number
-  ) {
-    const currAbsPos = this.relToAbs(state, currPos);
-    // const newAbsPos = this.relToAbs(state, newPos);
+  moveAnnotation(state: EditorState, id: string, newPos: number) {
     console.log(
-      `%c [${this.options.instance}] move annotation`,
+      `%c[${this.options.instance}] move annotation`,
       `color: ${this.color}`,
       {
-        currAbsPos,
+        id,
         newPos,
       }
     );
-
     // update decoration position
     const { map } = this.options;
-    const decorationsToUpdate = this.decorations.find(currAbsPos, currAbsPos);
-    console.log(
-      `%c [${this.options.instance}] move current decorations at ${currAbsPos}`,
-      `color: ${this.color}`,
-      decorationsToUpdate
-    );
-    if (decorationsToUpdate.length === 0) {
-      // TODO figure out if we need to do decorations.map here
-      return this;
-    }
-
-    decorationsToUpdate.forEach((deco) => {
-      console.log(
-        `${this.options.instance} move annotations from ${currAbsPos} to ${newPos}`
-      );
-      const id = deco.spec.id;
-      const existing = map.get(deco.spec.id);
-      map.set(id, {
-        ...existing,
-        pos: this.absToRel(state, newPos),
-      });
+    const existing = map.get(id);
+    map.set(id, {
+      ...existing,
+      pos: this.absToRel(state, newPos),
     });
     return this;
   }
@@ -196,7 +168,8 @@ export class AnnotationState {
         binding.mapping
       );
       console.log(
-        `${this.options.instance} creating decoration from annotation`,
+        `%c[${this.options.instance}] creating decoration from annotation`,
+        `color: ${this.color}`,
         {
           data: annotation.data,
           pos,
@@ -216,12 +189,12 @@ export class AnnotationState {
         return results[0].pos;
       };
 
-      console.log("start", {
-        node,
-        nodeAfter: node.nodeAfter,
-        parent: node.parent,
-        start: node.nodeAfter?.isBlock ? pos : getPos(node.parent),
-      });
+      // console.log("start", {
+      //   node,
+      //   nodeAfter: node.nodeAfter,
+      //   parent: node.parent,
+      //   start: node.nodeAfter?.isBlock ? pos : getPos(node.parent),
+      // });
 
       const start = node.nodeAfter?.isBlock ? pos : getPos(node.parent);
       const end =
@@ -229,12 +202,16 @@ export class AnnotationState {
         (node.nodeAfter?.isBlock
           ? node.nodeAfter.nodeSize
           : node.parent.nodeSize);
-      console.log(`${this.options.instance} creating decoration`, {
-        pos,
-        node,
-        start,
-        end,
-      });
+      console.log(
+        `%c[${this.options.instance}] creating decoration`,
+        `color: ${this.color}`,
+        {
+          pos,
+          node,
+          start,
+          end,
+        }
+      );
 
       this.annotations.push({
         data: annotation.data,
@@ -298,7 +275,7 @@ export class AnnotationState {
 
       if (action.type === "moveAnnotations") {
         action.toMove.forEach((data) => {
-          this.moveAnnotation(state, data.currPos, data.newPos);
+          this.moveAnnotation(state, data.id, data.newPos);
         });
       }
 
@@ -379,19 +356,7 @@ export class AnnotationState {
 
     if (joinBlock || splitBlockAtStart) {
       return this;
-      // return this.handleLocalJoinBlock(
-      //   joinBlock.currentDecorationPos,
-      //   joinBlock.newDecorationPos,
-      //   state
-      // );
     }
-
-    // no longer needed since we handle updates in a setTimeout
-    // if (splitBlockAtStart) {
-    //   // splitting block
-    //   // refreshDecorations call in KeymapOverride will handle updating
-    //   return this;
-    // }
 
     // no special cases, allow decoration mapping to happen
     this.decorations = this.decorations.map(

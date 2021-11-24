@@ -7,12 +7,17 @@ import {
 } from "@tiptap/react";
 
 export const ParagraphView = (nodeViewProps: NodeViewProps) => {
-  const { decorations, editor } = nodeViewProps;
-  // console.log("ParagraphView", { decorations });
+  const { decorations } = nodeViewProps;
+
   return (
     <NodeViewWrapper style={{ position: "relative" }}>
       {decorations.map((d, ind) => (
-        <span className="widget" tabIndex={9999} key={ind}>
+        <span
+          contentEditable={false}
+          className="widget"
+          tabIndex={-9999}
+          key={ind}
+        >
           {d.spec.data}
         </span>
       ))}

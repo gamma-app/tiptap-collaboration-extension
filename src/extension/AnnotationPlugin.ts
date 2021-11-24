@@ -34,8 +34,11 @@ export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
         const { decorations, annotations } = this.getState(state);
 
         // console.log("deco props", decorations.find());
-        // options.onUpdate(decorations.find().map((d) => new AnnotationItem(d)));
-        options.onUpdate(decorations.find(), annotations);
+        options.onUpdate(
+          decorations.find().map((d) => new AnnotationItem(d)),
+          annotations
+        );
+        // options.onUpdate(decorations.find(), annotations);
 
         return decorations;
       },
