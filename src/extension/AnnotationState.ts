@@ -26,9 +26,7 @@ export interface AnnotationStateOptions {
 export type AnnotationData = {
   data: string;
   id: string;
-  pos: number;
-  start: number;
-  end: number;
+  relativePos: Y.RelativePosition;
 };
 
 export class AnnotationState {
@@ -115,15 +113,6 @@ export class AnnotationState {
     return absolutePositionToRelativePosition(abs, type, binding.mapping);
   }
 
-  relToAbs(state: EditorState, rel: Y.RelativePosition): number {
-    const ystate = ySyncPluginKey.getState(state);
-    const { doc, type, binding } = ystate;
-    if (!ystate.binding) {
-      throw new Error("Y.State non initialized");
-    }
-    return relativePositionToAbsolutePosition(doc, type, rel, binding.mapping);
-  }
-
   moveAnnotation(state: EditorState, id: string, newPos: number) {
     console.log(
       `%c[${this.options.instance}] move annotation`,
@@ -166,14 +155,6 @@ export class AnnotationState {
         annotation.pos,
         binding.mapping
       );
-      console.log(
-        `%c[${this.options.instance}] creating decoration from annotation`,
-        `color: ${this.color}`,
-        {
-          data: annotation.data,
-          pos,
-        }
-      );
 
       if (!pos) {
         return;
@@ -188,25 +169,19 @@ export class AnnotationState {
         return results[0].pos;
       };
 
-      // console.log("start", {
-      //   node,
-      //   nodeAfter: node.nodeAfter,
-      //   parent: node.parent,
-      //   start: node.nodeAfter?.isBlock ? pos : getPos(node.parent),
-      // });
-
       const start = node.nodeAfter?.isBlock ? pos : getPos(node.parent);
       const end =
         start +
         (node.nodeAfter?.isBlock
           ? node.nodeAfter.nodeSize
           : node.parent.nodeSize);
+
       console.log(
         `%c[${this.options.instance}] creating decoration`,
         `color: ${this.color}`,
         {
           pos,
-          node,
+          data: annotation.data,
           start,
           end,
         }
@@ -215,9 +190,10 @@ export class AnnotationState {
       this.annotations.push({
         data: annotation.data,
         id: key,
-        pos,
-        start,
-        end,
+        // pos,
+        // start,
+        // end,
+        relativePos: annotation.pos,
       });
       decorations.push(
         Decoration.node(
@@ -269,7 +245,11 @@ export class AnnotationState {
       }
 
       if (action.type === "createDecorations") {
-        this.createDecorations(state);
+        // since we can't do batch updates to a Y.Map swallow errors
+        // with the hope that things are "eventually right"
+        try {
+          this.createDecorations(state);
+        } catch (e) {}
       }
 
       if (action.type === "moveAnnotations") {
@@ -286,67 +266,22 @@ export class AnnotationState {
 
     // always re-render decorations for remote changes
     if (ystate.isChangeOrigin) {
-      this.createDecorations(state);
+      console.log(
+        `%c[${this.options.instance}] remote change`,
+        `color: ${this.color}`,
+        { transaction: transaction }
+      );
+      // createDecoration may fail in the case of a remote update from
+      // a special case like <enter>, <backspace> or <delete>
+      // swallow and expect that a correction to the annotation ymap is incoming
+      try {
+        this.createDecorations(state);
+      } catch (e) {}
       return this;
     }
 
     // LOCAL CHANGE
     return this.handleLocalChange(transaction, state);
-  }
-
-  /**
-   * Updates decoration position to the joined block
-   * NextBlock
-   * @param transaction
-   * @param state
-   * @returns
-   */
-  handleLocalJoinBlock(
-    currentBlockPos: number,
-    joinedBlockPos: number,
-    state: EditorState
-  ): this {
-    console.log(`${this.options.instance} decoration handleLocalJoinBlcok`, {
-      currentBlockPos,
-      joinedBlockPos,
-    });
-    // update decoration position
-    const ystate = ySyncPluginKey.getState(state);
-    const { type, binding } = ystate;
-    if (!ystate.binding) {
-      return this;
-    }
-    const { map } = this.options;
-    const decorationsToUpdate = this.decorations.find(
-      currentBlockPos,
-      currentBlockPos
-    );
-    console.log(
-      `found current decorations at ${currentBlockPos}`,
-      decorationsToUpdate
-    );
-    if (decorationsToUpdate.length === 0) {
-      // TODO figure out if we need to do decorations.map here
-      return this;
-    }
-
-    decorationsToUpdate.forEach((deco) => {
-      console.log(
-        `${this.options.instance} updating decoration from ${currentBlockPos} to ${joinedBlockPos}`
-      );
-      const relativePos = absolutePositionToRelativePosition(
-        joinedBlockPos,
-        type,
-        binding.mapping
-      );
-      const id = deco.spec.id;
-      const existing = map.get(deco.spec.id);
-      map.set(id, {
-        ...existing,
-        pos: relativePos,
-      });
-    });
-    return this;
   }
 
   handleLocalChange(transaction: Transaction, state: EditorState): this {

@@ -6,6 +6,12 @@ import { DecorationSet } from "prosemirror-view";
 import { AnnotationPluginKey } from "./AnnotationPlugin";
 import { AnnotationData } from "./AnnotationState";
 import { MoveInstruction } from ".";
+import {
+  ySyncPluginKey,
+  relativePositionToAbsolutePosition,
+  absolutePositionToRelativePosition,
+} from "y-prosemirror";
+import { RelativePosition } from "yjs";
 
 const getPos = (doc: any, curr: Node) => {
   const results = findChildren(doc, (node) => node === curr);
@@ -24,6 +30,28 @@ const getAnnotationState = (state: EditorState): AnnotationState => {
   return AnnotationPluginKey.getState(state) as AnnotationState;
 };
 
+const toAbsPosition = (state: EditorState, pos: RelativePosition) => {
+  const ystate = ySyncPluginKey.getState(state);
+  if (!ystate.binding) {
+    return this;
+  }
+  const { doc, type, binding } = ystate;
+  return relativePositionToAbsolutePosition(doc, type, pos, binding.mapping);
+};
+
+// helper function to create comparator
+const relativePosEq =
+  (state: EditorState, match: number) =>
+  ({ relativePos }: { relativePos: RelativePosition }) =>
+    toAbsPosition(state, relativePos) === match;
+
+const relativePosBetween =
+  (state: EditorState, start: number, end: number) =>
+  ({ relativePos }: { relativePos: RelativePosition }) => {
+    const pos = toAbsPosition(state, relativePos);
+    return pos > start && pos < end;
+  };
+
 export const KeymapOverride = Extension.create({
   name: "keymapOverride",
   priority: 101,
@@ -34,7 +62,7 @@ export const KeymapOverride = Extension.create({
         () => commands.newlineInCode(),
         () => commands.createParagraphNear(),
         () => commands.liftEmptyBlock(),
-        ({ tr, state }) => {
+        ({ tr, state, view }) => {
           // If a block is split from the very front
           // (i.e. moving the entire block),
           // mark the transaction so that the annotation
@@ -44,7 +72,7 @@ export const KeymapOverride = Extension.create({
           const beforeBlockPos = getPos(state.doc, beforeBlock);
 
           // handle split block at beginning of line
-          if (beforeBlockPos === beforeBlockFrom - 1) {
+          if (view.endOfTextblock("backward")) {
             const result = commands.splitBlock();
             if (result) {
               tr.setMeta("SPLIT_BLOCK_START", {});
@@ -86,8 +114,8 @@ export const KeymapOverride = Extension.create({
 
             // <prev block> <next block>
             const frontBlockAnnotations = annotations
-              .filter((a) => a.pos === beforeBlockFrom)
-              .map<MoveInstruction>(({ pos, id }) => {
+              .filter(relativePosEq(state, beforeBlockFrom))
+              .map<MoveInstruction>(({ id }) => {
                 return {
                   id,
                   newPos: newBlockPos,
@@ -95,11 +123,15 @@ export const KeymapOverride = Extension.create({
               });
 
             const middleBlockAnnotations = annotations
-              .filter((a) => a.pos > beforeBlockFrom && a.pos < origBlockEnd)
-              .map<MoveInstruction>(({ pos, id }) => {
+              // TODO should memoize relative position stuff
+              // or re-compute in the state
+              .filter(relativePosBetween(state, beforeBlockFrom, origBlockEnd))
+              .map<MoveInstruction>(({ id, relativePos }) => {
                 return {
                   id,
-                  newPos: newBlockPos + (pos - beforeBlockFrom + 1),
+                  newPos:
+                    newBlockPos +
+                    (toAbsPosition(state, relativePos) - beforeBlockFrom + 1),
                 };
               });
 
@@ -125,7 +157,11 @@ export const KeymapOverride = Extension.create({
       this.editor.commands.first(({ commands, state }) => [
         () => commands.undoInputRule(),
         () => commands.deleteSelection(),
-        ({ tr, state }) => {
+        ({ tr, state, view }) => {
+          if (!view.endOfTextblock("backward")) {
+            console.log("BACKSPACE - not at beginning of text block");
+            return false;
+          }
           // delete backspace position
           const currentBlockPos = tr.selection.$from.before();
           const origBlock = tr.selection.$from.parent;
@@ -159,8 +195,8 @@ export const KeymapOverride = Extension.create({
             //    ^
             //    annotation + currentBlockPos
             const frontBlockAnnotations = annotations
-              .filter(({ pos }) => pos === currentBlockPos)
-              .map<MoveInstruction>(({ pos, id }) => {
+              .filter(relativePosEq(state, currentBlockPos))
+              .map<MoveInstruction>(({ id }) => {
                 return {
                   id,
                   newPos: newDecorationPos,
@@ -175,17 +211,12 @@ export const KeymapOverride = Extension.create({
             //  | currentBlockPos
             //  origBlockPos
             const middleBlockAnnotations = annotations
-              .filter((a) => a.pos > origBlockPos && a.pos < origBlockEnd)
-              .map<MoveInstruction>(({ pos, id }) => {
+              .filter(relativePosBetween(state, origBlockPos, origBlockEnd))
+              .map<MoveInstruction>(({ relativePos, id }) => {
                 // middle offset is from `origBlock` start to pos
                 // does not count the inclusive origBlock.pos
+                const pos = toAbsPosition(state, relativePos);
                 const middleOffset = pos - (origBlockPos + 1); // +1 to denote the from, not the pos
-                console.log("middleoffset ", {
-                  pos,
-                  origBlockPos,
-                  id,
-                  middleOffset,
-                });
                 return {
                   id,
                   newPos: newBlockFrom + middleOffset,
@@ -216,7 +247,11 @@ export const KeymapOverride = Extension.create({
     const handleDelete = () =>
       this.editor.commands.first(({ commands }) => [
         () => commands.deleteSelection(),
-        ({ tr, state }) => {
+        ({ tr, state, view }) => {
+          if (!view.endOfTextblock("forward")) {
+            console.log("DELETE - not at end of text block");
+            return false;
+          }
           //   delete pressed here
           //           |
           //           v
@@ -256,8 +291,8 @@ export const KeymapOverride = Extension.create({
             //  | annotation
             //  nextBlockPos
             const frontBlockAnnotations = annotations
-              .filter(({ pos }) => pos === nextBlockPos)
-              .map<MoveInstruction>(({ pos, id }) => {
+              .filter(relativePosEq(state, nextBlockPos))
+              .map<MoveInstruction>(({ id }) => {
                 return {
                   id,
                   newPos: currentBlockFrom,
@@ -275,17 +310,12 @@ export const KeymapOverride = Extension.create({
             //  |   annotation
             //  nextBlockPos
             const middleBlockAnnotations = annotations
-              .filter((a) => a.pos > nextBlockPos && a.pos < nextBlockEnd)
-              .map<MoveInstruction>(({ pos, id }) => {
+              .filter(relativePosBetween(state, nextBlockPos, nextBlockEnd))
+              .map<MoveInstruction>(({ relativePos, id }) => {
                 // middle offset is from `origBlock` start to pos
                 // does not count the inclusive origBlock.pos
+                const pos = toAbsPosition(state, relativePos);
                 const middleOffset = pos - (nextBlockPos + 1); // +1 to denote the from, not the pos
-                console.log("middleoffset ", {
-                  pos,
-                  origBlockPos,
-                  id,
-                  middleOffset,
-                });
                 return {
                   id,
                   newPos: currentBlockFrom + middleOffset,

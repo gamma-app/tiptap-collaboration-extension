@@ -47,6 +47,10 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
       editor.commands.setTextSelection(14);
       await sleep();
       editor.commands.addAnnotation("c1");
+      await sleep();
+      editor.commands.setTextSelection(25);
+      await sleep();
+      editor.commands.addAnnotation("c2");
       return;
     }
     setTimeout(() => doit(), 500);
@@ -91,7 +95,9 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
           <div style={{ marginLeft: "10px " }}>{}</div>
         </div>
         <div style={{ marginBottom: 10 }}>
-          <div>Selection</div>
+          <div>
+            Selection: <strong>{selection?.anchor}</strong>
+          </div>
           <pre style={{ marginTop: 0 }}>{JSON.stringify(selection)}</pre>
         </div>
         <div style={{ marginBottom: 10 }}>
