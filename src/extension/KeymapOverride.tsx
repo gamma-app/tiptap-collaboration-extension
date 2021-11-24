@@ -3,10 +3,6 @@ import { findChildren } from "prosemirror-utils";
 import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { DecorationSet } from "prosemirror-view";
-import {
-  ySyncPluginKey,
-  absolutePositionToRelativePosition,
-} from "y-prosemirror";
 import { AnnotationPluginKey } from "./AnnotationPlugin";
 import { AnnotationData } from "./AnnotationState";
 import { MoveInstruction } from ".";
@@ -17,12 +13,6 @@ const getPos = (doc: any, curr: Node) => {
     throw new Error();
   }
   return results[0]?.pos;
-};
-
-const getRelPos = (state: EditorState, pos: number) => {
-  const ystate = ySyncPluginKey.getState(state);
-  const { type, binding } = ystate;
-  return absolutePositionToRelativePosition(pos, type, binding.mapping);
 };
 
 type AnnotationState = {
@@ -45,7 +35,6 @@ export const KeymapOverride = Extension.create({
         () => commands.createParagraphNear(),
         () => commands.liftEmptyBlock(),
         ({ tr, state }) => {
-          console.log("Handling enter");
           // If a block is split from the very front
           // (i.e. moving the entire block),
           // mark the transaction so that the annotation
@@ -74,27 +63,23 @@ export const KeymapOverride = Extension.create({
           const result = commands.splitBlock();
 
           // new block (2nd block) info
-          const newBlockFrom = tr.selection.$from.pos;
           const newBlock = tr.selection.$from.parent;
           const newBlockPos = getPos(state.doc, newBlock);
-          const newBlockEnd = newBlockPos + newBlock.nodeSize;
 
           if (result) {
             // set SPLIT_BLOCK_START so that the AnnotationState special cases
             tr.setMeta("SPLIT_BLOCK_START", {});
 
             // How far did the split move us
-            console.log("split blockkkkk", {
+            console.log("handling enter", {
               origBlock,
               origBlockPos,
               origBlockEnd,
               beforeBlock,
               beforeBlockFrom,
               beforeBlockPos,
-              newBlockFrom,
               newBlockPos,
               newBlock,
-              newBlockEnd,
             });
 
             const { annotations } = getAnnotationState(state);
@@ -131,8 +116,6 @@ export const KeymapOverride = Extension.create({
                 this.editor.commands.refreshDecorations();
               });
             }
-          } else {
-            console.log("DID NOT SPLIT BLOCK");
           }
           return result;
         },
@@ -156,14 +139,13 @@ export const KeymapOverride = Extension.create({
           if (joinBackward) {
             const newBlockFrom = tr.selection.$from.pos;
 
-            // back
             console.log("handling backspace", {
-              newSel: tr.selection,
               currentBlockPos,
               origBlock,
               origBlockPos,
               origBlockEnd,
             });
+
             // currentBlockPos and orignBlockPos will be the same when the backspace
             // is happening at the front of a block
 
@@ -209,10 +191,6 @@ export const KeymapOverride = Extension.create({
                   newPos: newBlockFrom + middleOffset,
                 };
               });
-            console.log("handling backspace", {
-              currentDecorationPos: currentBlockPos,
-              newDecorationPos,
-            });
             const toMove = [
               ...frontBlockAnnotations,
               ...middleBlockAnnotations,
@@ -253,27 +231,18 @@ export const KeymapOverride = Extension.create({
           const nextBlockEnd = nextBlockPos + nextBlock.nodeSize;
           const origBlock = tr.selection.$from.parent;
           const origBlockPos = getPos(state.doc, origBlock);
-          const origBlockEnd = origBlockPos + origBlock.nodeSize;
           // do join
           const joinForward = commands.joinForward();
 
           if (joinForward) {
-            const joinedBlock = tr.selection.$from.parent;
             // use tr.doc becuase it reflects the new doc structure after commands.joinForward()
-            const joinedBlockPos = getPos(tr.doc, joinedBlock);
-            const joinedBlockEnd = joinedBlockPos + joinedBlock.nodeSize;
             console.log("handling delete", {
-              // sel: tr.selection,
               currentBlockFrom,
               nextBlock,
               nextBlockPos,
               nextBlockEnd,
-              origBlockEnd,
               origBlockPos,
               origBlock,
-              joinedBlock,
-              joinedBlockPos,
-              joinedBlockEnd,
             });
 
             const { annotations } = getAnnotationState(state);

@@ -2,6 +2,29 @@
   font-family: sans-serif;
   text-align: left;
   margin-right: 6em;
+  height: 100vh;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+.top {
+  padding: 20px;
+  position: absolute;
+  height: 50vh;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.bottom {
+  padding: 20px;
+  position: absolute;
+  height: 50vh;
+  top: 50vh;
+  left: 0;
+  right: 0;
 }
 
 .ProseMirror {
