@@ -149,6 +149,7 @@ export const KeymapOverride = Extension.create({
           const origBlockPos = getPos(state.doc, origBlock);
           const origBlockEnd = origBlockPos + origBlock.nodeSize;
 
+          // do join
           const joinBackward = commands.joinBackward();
 
           // joinBackward is true if a backspace resulted in a join block
@@ -238,21 +239,103 @@ export const KeymapOverride = Extension.create({
       this.editor.commands.first(({ commands }) => [
         () => commands.deleteSelection(),
         ({ tr, state }) => {
-          const currentDecorationPos = tr.selection.$from.after();
+          //   delete pressed here
+          //           |
+          //           v
+          // <p>block 1|</p>       currentBlock
+          // <p>block 2</p>        nextBlock
+          //
+          // RESULT:
+          // <p>block 1block 2</p> joinedBlock
+          const currentBlockFrom = tr.selection.$from.pos;
+          const nextBlockPos = tr.selection.$from.after();
+          const nextBlock = state.doc.resolve(nextBlockPos).nodeAfter;
+          const nextBlockEnd = nextBlockPos + nextBlock.nodeSize;
+          const origBlock = tr.selection.$from.parent;
+          const origBlockPos = getPos(state.doc, origBlock);
+          const origBlockEnd = origBlockPos + origBlock.nodeSize;
           // do join
           const joinForward = commands.joinForward();
-          // selection is now within the joined nodes
-          const { parent: joinedNode } = tr.selection.$from;
-          const matches = findChildren(tr.doc, (node) => node === joinedNode);
 
-          if (joinForward && matches) {
-            tr.setMeta("JOIN_BLOCK", {
-              currentDecorationPos,
-              newDecorationPos: matches[0].pos,
+          if (joinForward) {
+            const joinedBlock = tr.selection.$from.parent;
+            // use tr.doc becuase it reflects the new doc structure after commands.joinForward()
+            const joinedBlockPos = getPos(tr.doc, joinedBlock);
+            const joinedBlockEnd = joinedBlockPos + joinedBlock.nodeSize;
+            console.log("handling delete", {
+              // sel: tr.selection,
+              currentBlockFrom,
+              nextBlock,
+              nextBlockPos,
+              nextBlockEnd,
+              origBlockEnd,
+              origBlockPos,
+              origBlock,
+              joinedBlock,
+              joinedBlockPos,
+              joinedBlockEnd,
             });
-            requestAnimationFrame(() => {
-              this.editor.commands.refreshDecorations();
-            });
+
+            const { annotations } = getAnnotationState(state);
+            // handle join forward block where annotation is at front
+            //     currentBlockFrom
+            //           |
+            //           v
+            // <p>block 1|</p>
+            // <p>|block 2</p>
+            //  ^ ^️
+            //  | annotation
+            //  nextBlockPos
+            const frontBlockAnnotations = annotations
+              .filter(({ pos }) => pos === nextBlockPos)
+              .map<MoveInstruction>(({ pos, id }) => {
+                return {
+                  id,
+                  newPos: currentBlockFrom,
+                };
+              });
+
+            // handle join backwards block where annotation in middle of block
+            //
+            //     currentBlockFrom
+            //           |
+            //           v
+            // <p>block 1|</p>
+            // <p>bl|ock 2</p>
+            //  ^   ^️
+            //  |   annotation
+            //  nextBlockPos
+            const middleBlockAnnotations = annotations
+              .filter((a) => a.pos > nextBlockPos && a.pos < nextBlockEnd)
+              .map<MoveInstruction>(({ pos, id }) => {
+                // middle offset is from `origBlock` start to pos
+                // does not count the inclusive origBlock.pos
+                const middleOffset = pos - (nextBlockPos + 1); // +1 to denote the from, not the pos
+                console.log("middleoffset ", {
+                  pos,
+                  origBlockPos,
+                  id,
+                  middleOffset,
+                });
+                return {
+                  id,
+                  newPos: currentBlockFrom + middleOffset,
+                };
+              });
+            const toMove = [
+              ...frontBlockAnnotations,
+              ...middleBlockAnnotations,
+            ];
+
+            if (toMove.length > 0) {
+              requestAnimationFrame(() => {
+                this.editor.commands.moveAnnotations(toMove);
+              });
+            } else {
+              requestAnimationFrame(() => {
+                this.editor.commands.refreshDecorations();
+              });
+            }
           }
           return joinForward;
         },

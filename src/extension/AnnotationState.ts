@@ -1,7 +1,6 @@
 import * as Y from "yjs";
 import { EditorState, Transaction } from "prosemirror-state";
 import { findChildren } from "prosemirror-utils";
-import { Mapping, StepMap, Transform } from "prosemirror-transform";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import {
   ySyncPluginKey,
