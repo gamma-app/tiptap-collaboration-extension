@@ -6,7 +6,7 @@ import { AnnotationItem } from "./AnnotationItem";
 export const AnnotationPluginKey = new PluginKey("annotation");
 
 export interface AnnotationPluginOptions {
-  onUpdate: (items: any[]) => void;
+  onUpdate: (items: any[], items2: any[]) => void;
   map: Y.Map<any>;
   instance: string;
   color: string;
@@ -29,25 +29,16 @@ export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
       },
     },
 
-    // appendTransaction(transactions, old, state) {
-    //   console.log(`${options.instance} applying transaction`, transactions);
-    //   const hasSplitBlock = transactions.find((transaction) =>
-    //     transaction.getMeta("SPLIT_BLOCK_START")
-    //   );
-    //   if (hasSplitBlock) {
-    //     console.log("adding another back");
-    //     return state.tr.setMeta(AnnotationPluginKey, {
-    //       type: "createDecorations",
-    //     });
-    //   }
-    // },
-
     props: {
       decorations(state) {
-        const { decorations } = this.getState(state);
+        const { decorations, annotations } = this.getState(state);
 
         // console.log("deco props", decorations.find());
-        options.onUpdate(decorations.find().map((d) => new AnnotationItem(d)));
+        options.onUpdate(
+          decorations.find().map((d) => new AnnotationItem(d)),
+          annotations
+        );
+        // options.onUpdate(decorations.find(), annotations);
 
         return decorations;
       },

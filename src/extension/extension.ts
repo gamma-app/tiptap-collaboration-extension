@@ -15,6 +15,11 @@ export interface AddAnnotationAction {
   data: any;
   pos: number;
 }
+
+export interface CreateDecorationsAction {
+  type: "createDecorations";
+}
+
 export interface ClearAnnotationsAction {
   type: "clearAnnotations";
 }
@@ -30,11 +35,21 @@ export interface DeleteAnnotationAction {
   id: string;
 }
 
+export type MoveInstruction = {
+  id: string;
+  newPos: number;
+};
+
+export interface MoveAnnotationsAction {
+  type: "moveAnnotations";
+  toMove: MoveInstruction[];
+}
+
 export interface AnnotationOptions {
   /**
    * An event listener which receives annotations for the current selection.
    */
-  onUpdate: (items: any[]) => void;
+  onUpdate: (items: any[], annotations: any[]) => void;
   /**
    * An initialized Y.js document.
    */
@@ -57,6 +72,7 @@ declare module "@tiptap/core" {
       deleteAnnotation: (id: string) => ReturnType;
       clearAnnotations: () => ReturnType;
       refreshDecorations: () => ReturnType;
+      moveAnnotations: (toMove: MoveInstruction[]) => ReturnType;
     };
   }
 }
@@ -76,11 +92,20 @@ export const CollaborationAnnotation = Extension.create({
   } as AnnotationOptions,
 
   onCreate() {
-    getMap(this.options.document).observe((ev) => {
-      // console.log(
-      //   `%c [${this.options.instance}] map.observe updated → dispatching createDecorations`,
-      //   `color: ${this.options.color}`
-      // );
+    const map = getMap(this.options.document);
+    if (this.options.instance === "editor1") {
+      // @ts-ignore
+      window["ymap"] = map;
+    }
+    map.observe((ev) => {
+      console.log(
+        `%c[${this.options.instance}] map.observe updated → dispatching createDecorations`,
+        `color: ${this.options.color}`,
+
+        {
+          map: getMap(this.options.document).toJSON(),
+        }
+      );
 
       this.editor.commands.refreshDecorations();
     });
@@ -88,6 +113,19 @@ export const CollaborationAnnotation = Extension.create({
 
   addCommands() {
     return {
+      moveAnnotations:
+        (toMove: MoveInstruction[]) =>
+        ({ dispatch, state, tr }) => {
+          if (dispatch) {
+            tr.setMeta(AnnotationPluginKey, {
+              type: "moveAnnotations",
+              toMove,
+            });
+            dispatch(tr);
+          }
+
+          return true;
+        },
       clearAnnotations:
         () =>
         ({ dispatch, state, tr }) => {
