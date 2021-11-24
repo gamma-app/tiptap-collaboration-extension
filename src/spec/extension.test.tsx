@@ -26,7 +26,7 @@ EditorView.prototype.updateState = function updateState(state) {
 
 // sleep util
 const sleep: () => Promise<void> = () =>
-  new Promise((res) => setTimeout(() => res(), 0));
+  new Promise((res) => requestAnimationFrame(() => res()));
 
 let LocalEditor: React.FC<any> = null;
 let RemoteEditor: React.FC<any> = null;
@@ -722,7 +722,7 @@ describe("multiple comments", () => {
           key: "Backspace",
           code: "Backspace",
           charCode: 8,
-        })
+        });
       });
       await sleep();
 

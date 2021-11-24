@@ -1,5 +1,6 @@
 import * as Y from "yjs";
 import { EditorState, Transaction } from "prosemirror-state";
+import { findChildren } from "prosemirror-utils";
 import { Mapping, StepMap, Transform } from "prosemirror-transform";
 import { Decoration, DecorationSet } from "prosemirror-view";
 import {
@@ -15,6 +16,7 @@ import {
 } from "./extension";
 import { AnnotationPluginKey } from "./AnnotationPlugin";
 import { AnnotationItem } from "./AnnotationItem";
+import { CreateDecorationsAction, MoveAnnotationsAction } from ".";
 
 export interface AnnotationStateOptions {
   map: Y.Map<any>;
@@ -22,10 +24,20 @@ export interface AnnotationStateOptions {
   color: string;
 }
 
+export type AnnotationData = {
+  data: string;
+  id: string;
+  pos: number;
+  start: number;
+  end: number;
+};
+
 export class AnnotationState {
   options: AnnotationStateOptions;
 
   decorations = DecorationSet.empty;
+
+  annotations: AnnotationData[] = [];
 
   color: string;
 
@@ -98,6 +110,68 @@ export class AnnotationState {
     map.delete(id);
   }
 
+  // helpers for relative position
+  absToRel(state: EditorState, abs: number): Y.RelativePosition {
+    const ystate = ySyncPluginKey.getState(state);
+    const { type, binding } = ystate;
+    if (!ystate.binding) {
+      throw new Error("Y.State non initialized");
+    }
+    return absolutePositionToRelativePosition(abs, type, binding.mapping);
+  }
+
+  relToAbs(state: EditorState, rel: Y.RelativePosition): number {
+    const ystate = ySyncPluginKey.getState(state);
+    const { doc, type, binding } = ystate;
+    if (!ystate.binding) {
+      throw new Error("Y.State non initialized");
+    }
+    return relativePositionToAbsolutePosition(doc, type, rel, binding.mapping);
+  }
+
+  moveAnnotation(
+    state: EditorState,
+    currPos: Y.RelativePosition,
+    newPos: number
+  ) {
+    const currAbsPos = this.relToAbs(state, currPos);
+    // const newAbsPos = this.relToAbs(state, newPos);
+    console.log(
+      `%c [${this.options.instance}] move annotation`,
+      `color: ${this.color}`,
+      {
+        currAbsPos,
+        newPos,
+      }
+    );
+
+    // update decoration position
+    const { map } = this.options;
+    const decorationsToUpdate = this.decorations.find(currAbsPos, currAbsPos);
+    console.log(
+      `%c [${this.options.instance}] move current decorations at ${currAbsPos}`,
+      `color: ${this.color}`,
+      decorationsToUpdate
+    );
+    if (decorationsToUpdate.length === 0) {
+      // TODO figure out if we need to do decorations.map here
+      return this;
+    }
+
+    decorationsToUpdate.forEach((deco) => {
+      console.log(
+        `${this.options.instance} move annotations from ${currAbsPos} to ${newPos}`
+      );
+      const id = deco.spec.id;
+      const existing = map.get(deco.spec.id);
+      map.set(id, {
+        ...existing,
+        pos: this.absToRel(state, newPos),
+      });
+    });
+    return this;
+  }
+
   annotationsAt(position: number) {
     return this.decorations.find(position, position).map((decoration) => {
       return new AnnotationItem(decoration);
@@ -113,6 +187,7 @@ export class AnnotationState {
     const { doc, type, binding } = ystate;
     const decorations: Decoration[] = [];
 
+    this.annotations = [];
     map.forEach((annotation, key) => {
       const pos = relativePositionToAbsolutePosition(
         doc,
@@ -120,21 +195,64 @@ export class AnnotationState {
         annotation.pos,
         binding.mapping
       );
+      console.log(
+        `${this.options.instance} creating decoration from annotation`,
+        {
+          data: annotation.data,
+          pos,
+        }
+      );
 
       if (!pos) {
         return;
       }
 
       const node = state.doc.resolve(pos);
+      const getPos = (curr) => {
+        const results = findChildren(state.doc, (node) => node === curr);
+        if (!results) {
+          throw new Error();
+        }
+        return results[0].pos;
+      };
+
+      console.log("start", {
+        node,
+        nodeAfter: node.nodeAfter,
+        parent: node.parent,
+        start: node.nodeAfter?.isBlock ? pos : getPos(node.parent),
+      });
+
+      const start = node.nodeAfter?.isBlock ? pos : getPos(node.parent);
+      const end =
+        start +
+        (node.nodeAfter?.isBlock
+          ? node.nodeAfter.nodeSize
+          : node.parent.nodeSize);
+      console.log(`${this.options.instance} creating decoration`, {
+        pos,
+        node,
+        start,
+        end,
+      });
+
+      this.annotations.push({
+        data: annotation.data,
+        id: key,
+        pos,
+        start,
+        end,
+      });
       decorations.push(
         Decoration.node(
-          pos,
-          pos + node.nodeAfter?.nodeSize || 0,
+          start,
+          end,
           // attrs
           {},
           {
             id: key,
             data: annotation.data,
+            pos,
             destroy(node) {
               console.log("DESTROYED!", node);
             },
@@ -153,6 +271,8 @@ export class AnnotationState {
       | AddAnnotationAction
       | UpdateAnnotationAction
       | ClearAnnotationsAction
+      | MoveAnnotationsAction
+      | CreateDecorationsAction
       | DeleteAnnotationAction;
 
     if (action && action.type) {
@@ -172,15 +292,16 @@ export class AnnotationState {
         this.deleteAnnotation(action.id);
       }
 
-      // @ts-ignore
       if (action.type === "createDecorations") {
         this.createDecorations(state);
       }
 
-      // @ts-ignore
-      if (action.type === "refreshDecorations") {
-        this.createDecorations(state);
+      if (action.type === "moveAnnotations") {
+        action.toMove.forEach((data) => {
+          this.moveAnnotation(state, data.currPos, data.newPos);
+        });
       }
+
       return this;
     }
 
@@ -209,6 +330,10 @@ export class AnnotationState {
     joinedBlockPos: number,
     state: EditorState
   ): this {
+    console.log(`${this.options.instance} decoration handleLocalJoinBlcok`, {
+      currentBlockPos,
+      joinedBlockPos,
+    });
     // update decoration position
     const ystate = ySyncPluginKey.getState(state);
     const { type, binding } = ystate;
@@ -225,12 +350,14 @@ export class AnnotationState {
       decorationsToUpdate
     );
     if (decorationsToUpdate.length === 0) {
-      console.log("handling local join forward");
       // TODO figure out if we need to do decorations.map here
       return this;
     }
 
     decorationsToUpdate.forEach((deco) => {
+      console.log(
+        `${this.options.instance} updating decoration from ${currentBlockPos} to ${joinedBlockPos}`
+      );
       const relativePos = absolutePositionToRelativePosition(
         joinedBlockPos,
         type,
@@ -250,25 +377,27 @@ export class AnnotationState {
     const splitBlockAtStart = transaction.getMeta("SPLIT_BLOCK_START");
     const joinBlock = transaction.getMeta("JOIN_BLOCK");
 
-    if (joinBlock) {
-      return this.handleLocalJoinBlock(
-        joinBlock.currentDecorationPos,
-        joinBlock.newDecorationPos,
-        state
-      );
+    if (joinBlock || splitBlockAtStart) {
+      return this;
+      // return this.handleLocalJoinBlock(
+      //   joinBlock.currentDecorationPos,
+      //   joinBlock.newDecorationPos,
+      //   state
+      // );
     }
 
-    if (splitBlockAtStart) {
-      // splitting block
-      // refreshDecorations call in KeymapOverride will handle updating
-      return this;
-    }
+    // no longer needed since we handle updates in a setTimeout
+    // if (splitBlockAtStart) {
+    //   // splitting block
+    //   // refreshDecorations call in KeymapOverride will handle updating
+    //   return this;
+    // }
 
     // no special cases, allow decoration mapping to happen
     this.decorations = this.decorations.map(
       transaction.mapping,
       transaction.doc
     );
-    return this
+    return this;
   }
 }

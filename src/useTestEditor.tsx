@@ -24,7 +24,7 @@ export const useTestEditor = ({
   color: string;
   content?: string;
   devTools?: boolean;
-  onUpdate?: (decos: any) => void;
+  onUpdate?: (decos: any, annotations: any) => void;
 }) => {
   return useEditor({
     onCreate({ editor }) {
