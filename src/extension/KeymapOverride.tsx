@@ -2,9 +2,8 @@ import { Extension } from "@tiptap/core";
 import { findChildren } from "prosemirror-utils";
 import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
-import { DecorationSet } from "prosemirror-view";
 import { AnnotationPluginKey } from "./AnnotationPlugin";
-import { AnnotationData } from "./AnnotationState";
+import { AnnotationState } from "./AnnotationState";
 import { MoveInstruction } from ".";
 import {
   ySyncPluginKey,
@@ -18,11 +17,6 @@ const getPos = (doc: any, curr: Node) => {
     throw new Error();
   }
   return results[0]?.pos;
-};
-
-type AnnotationState = {
-  annotations: AnnotationData[];
-  decorations: DecorationSet;
 };
 
 const getAnnotationState = (state: EditorState): AnnotationState => {
