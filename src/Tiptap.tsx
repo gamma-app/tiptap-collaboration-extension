@@ -30,13 +30,6 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
   useEffect(() => {
     if (!editor || instance !== "editor1") return;
 
-    editor.on("transaction", ({ editor, transaction }) => {
-      // console.log(
-      //   `%c [${instance}] on transaction`,
-      //   `color: ${color}`,
-      //   transaction
-      // );
-    });
     editor.on("selectionUpdate", ({ editor }) => {
       setSelection(editor.state.selection);
     });
