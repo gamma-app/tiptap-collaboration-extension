@@ -46,7 +46,7 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
       editor.commands.addAnnotation("c2");
       return;
     }
-    setTimeout(() => doit(), 500);
+    // setTimeout(() => doit(), 500);
   }, [editor, instance]);
 
   if (devTools && !window["editor"]) {

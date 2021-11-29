@@ -26,7 +26,9 @@ EditorView.prototype.updateState = function updateState(state) {
 
 // sleep util
 const sleep: () => Promise<void> = () =>
-  new Promise((res) => setTimeout(() => res()));
+  new Promise((res) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => res()))
+  );
 
 let LocalEditor: React.FC<any> = null;
 let RemoteEditor: React.FC<any> = null;
@@ -46,7 +48,6 @@ afterEach(() => {
 });
 
 beforeEach(() => {
-  console.log("new ydoc");
   ydoc = new Y.Doc();
   RemoteEditor = ({
     instance = "remote",
@@ -83,7 +84,6 @@ beforeEach(() => {
 });
 
 afterEach(async () => {
-  console.log("after each");
   await cleanup();
 });
 
@@ -175,7 +175,6 @@ describe("local editor", () => {
       localEditorInstance.commands.insertContent("hello");
     });
     expect(localEditor.queryByText("block 1").textContent).to.eql("block 1");
-    console.log();
     expect(localEditorInstance.getHTML()).to.eql(
       `<h1>hhello</h1><p>block 1</p>`
     );
@@ -247,6 +246,7 @@ describe("local editor", () => {
       localEditorInstance.commands.setTextSelection(6);
       const node = await localEditor.findByText("block 1");
       fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+      await sleep();
     });
     // let other transactions go through
     await sleep();
@@ -279,6 +279,8 @@ describe("local editor", () => {
       const node = await localEditor.findByText("block 1");
 
       fireEvent.keyDown(node, { key: "Enter", code: "Enter", charCode: 13 });
+      await sleep();
+
       localEditorInstance.commands.setTextSelection(8);
 
       const node2 = await localEditor.findByText("ock 1");
@@ -287,6 +289,7 @@ describe("local editor", () => {
         code: "Backspace",
         charCode: 8,
       });
+      await sleep();
     });
     // let other transactions go through
 
@@ -410,7 +413,6 @@ describe("multiple comments", () => {
     });
 
     await sleep();
-    console.log(localEditorInstance.getHTML());
     expect(decos[0]).to.shallowDeepEqual({
       decoration: {
         from: 14,
@@ -445,7 +447,6 @@ describe("multiple comments", () => {
       // let other transactions go through
 
       await sleep();
-      console.log(localEditorInstance.getHTML());
       expect(localEditorInstance.getHTML()).to.equal(
         `<h1>h</h1><p>bl</p><p>ock 1</p><p>block 2</p><p>block 3</p>`
       );
@@ -484,7 +485,6 @@ describe("multiple comments", () => {
       // let other transactions go through
 
       await sleep();
-      console.log(localEditorInstance.getHTML());
       expect(localEditorInstance.getHTML()).to.equal(
         `<h1>h</h1><p></p><p>block 1</p><p>block 2</p><p>block 3</p>`
       );
