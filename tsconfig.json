@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2015",
     "lib": [
       "dom",
       "dom.iterable",
@@ -8,22 +8,34 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
-    "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "strict": false,
     "forceConsistentCasingInFileNames": true,
-    "noFallthroughCasesInSwitch": true,
+    "noEmit": true,
+    "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "node",
-    "sourceMap": true,
     "resolveJsonModule": true,
-    "jsx": "react-jsx",
+    "sourceMap": true,
     "isolatedModules": true,
-    "outDir": "dist",
-    "incremental": true,
-    "noEmit": true
+    "noImplicitReturns": true,
+    "importHelpers": true,
+    "strictNullChecks": true,
+    "suppressImplicitAnyIndexErrors": true,
+    "noUnusedLocals": false,
+    "allowSyntheticDefaultImports": true,
+    "downlevelIteration": true,
+    "strictBindCallApply": true,
+    "jsx": "react-jsx",
+    "noFallthroughCasesInSwitch": true
   },
+  "exclude": [
+    "node_modules"
+  ],
   "include": [
-    "src"
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    "src/test/jest-setup.ts",
+    "jest.config.ts"
   ]
 }

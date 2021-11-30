@@ -1,24 +1,24 @@
 export class AnnotationItem {
-  private decoration: any;
+  private decoration: any
 
   constructor(decoration: any) {
-    this.decoration = decoration;
+    this.decoration = decoration
   }
 
   get id() {
-    return this.decoration.type.spec.id;
+    return this.decoration.type.spec.id
   }
 
   get from() {
-    return this.decoration.from;
+    return this.decoration.from
   }
 
   get data() {
-    return this.decoration.type.spec.data;
+    return this.decoration.type.spec.data
   }
 
   get HTMLAttributes() {
-    return this.decoration.type.attrs;
+    return this.decoration.type.attrs
   }
 
   toString() {
@@ -27,6 +27,6 @@ export class AnnotationItem {
       data: this.data,
       from: this.from,
       HTMLAttributes: this.HTMLAttributes,
-    });
+    })
   }
 }

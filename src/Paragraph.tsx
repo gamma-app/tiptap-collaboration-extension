@@ -1,16 +1,16 @@
-import TiptapParagraph from "@tiptap/extension-paragraph";
+import TiptapParagraph from '@tiptap/extension-paragraph'
 import {
   NodeViewProps,
   NodeViewContent,
   ReactNodeViewRenderer,
   NodeViewWrapper,
-} from "@tiptap/react";
+} from '@tiptap/react'
 
 export const ParagraphView = (nodeViewProps: NodeViewProps) => {
-  const { decorations } = nodeViewProps;
+  const { decorations } = nodeViewProps
 
   return (
-    <NodeViewWrapper style={{ position: "relative" }}>
+    <NodeViewWrapper style={{ position: 'relative' }}>
       {decorations.map((d, ind) => (
         <span
           contentEditable={false}
@@ -23,12 +23,12 @@ export const ParagraphView = (nodeViewProps: NodeViewProps) => {
       ))}
       <NodeViewContent as="p" />
     </NodeViewWrapper>
-  );
-};
+  )
+}
 
 export const Paragraph = TiptapParagraph.extend({
-  name: "paragraph",
+  name: 'paragraph',
   addNodeView() {
-    return ReactNodeViewRenderer(ParagraphView);
+    return ReactNodeViewRenderer(ParagraphView)
   },
-});
+})

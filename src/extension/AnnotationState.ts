@@ -13,7 +13,6 @@ import {
   AddAnnotationAction,
   ClearAnnotationsAction,
   DeleteAnnotationAction,
-  UpdateAnnotationAction,
 } from './extension'
 
 import { CreateDecorationsAction, MoveAnnotationsAction } from '.'
@@ -27,6 +26,8 @@ export interface AnnotationStateOptions {
 export type AnnotationData = {
   data: string
   id: string
+  start: number
+  end: number
   relativePos: Y.RelativePosition
 }
 
@@ -44,49 +45,27 @@ export class AnnotationState {
     this.color = options.color
   }
 
-  randomId() {
-    // TODO: That seems … to simple.
-    return Math.floor(Math.random() * 0xffffffff).toString()
-  }
-
-  findAnnotation(key: string) {
-    const current = this.decorations.find()
-
-    for (let i = 0; i < current.length; i += 1) {
-      if (current[i].spec.key === key) {
-        return current[i]
-      }
-    }
-  }
-
   clearAnnotations(action: ClearAnnotationsAction, state: EditorState) {
     const ystate = ySyncPluginKey.getState(state)
     if (!ystate.binding) {
       return this
     }
     // TODO fix this
-    // this.options.map.clear()
+    // @ts-ignore
+    this.options.map.forEach((val, key) => {
+      this.options.map.delete(key)
+    })
+    return this
   }
 
   addAnnotation(action: AddAnnotationAction, state: EditorState) {
     const { map } = this.options
-    const { pos, data } = action
+    const { pos, id, data } = action
     const relativePos = this.absToRel(state, pos)
-    const randomId = this.randomId()
-    map.set(randomId, {
+    map.set(id, {
+      id,
       pos: relativePos,
       data,
-    })
-  }
-
-  updateAnnotation(action: UpdateAnnotationAction) {
-    const { map } = this.options
-
-    const annotation = map.get(action.id)
-
-    map.set(action.id, {
-      from: annotation.from,
-      data: action.data,
     })
   }
 
@@ -94,16 +73,6 @@ export class AnnotationState {
     const { map } = this.options
 
     map.delete(id)
-  }
-
-  // helpers for relative position
-  absToRel(state: EditorState, abs: number): Y.RelativePosition {
-    const ystate = ySyncPluginKey.getState(state)
-    const { type, binding } = ystate
-    if (!ystate.binding) {
-      throw new Error('Y.State non initialized')
-    }
-    return absolutePositionToRelativePosition(abs, type, binding.mapping)
   }
 
   moveAnnotation(state: EditorState, id: string, newPos: number) {
@@ -178,6 +147,8 @@ export class AnnotationState {
         id: key,
         data: annotation.data,
         relativePos: annotation.pos,
+        start,
+        end,
       })
       decorations.push(
         Decoration.node(
@@ -186,12 +157,10 @@ export class AnnotationState {
           // attrs
           {},
           {
+            isAnnotation: true,
             id: key,
             data: annotation.data,
-            pos,
-            destroy(node) {
-              console.log('DESTROYED!', node)
-            },
+            // pos,
           }
         )
       )
@@ -206,7 +175,6 @@ export class AnnotationState {
     // Add/Remove annotations
     const action = transaction.getMeta(AnnotationPluginKey) as
       | AddAnnotationAction
-      | UpdateAnnotationAction
       | ClearAnnotationsAction
       | MoveAnnotationsAction
       | CreateDecorationsAction
@@ -221,10 +189,6 @@ export class AnnotationState {
         this.clearAnnotations(action, state)
       }
 
-      if (action.type === 'updateAnnotation') {
-        this.updateAnnotation(action)
-      }
-
       if (action.type === 'deleteAnnotation') {
         this.deleteAnnotation(action.id)
       }
@@ -235,6 +199,7 @@ export class AnnotationState {
         try {
           this.createDecorations(state)
         } catch (e) {
+          console.log(`could not create decorations: ${e.message}`, e)
           // swallow
         }
       }
@@ -264,6 +229,7 @@ export class AnnotationState {
       try {
         this.createDecorations(state)
       } catch (e) {
+        console.log(`could not create decorations: ${e.message}`, e)
         // swallow
       }
       return this
@@ -287,5 +253,15 @@ export class AnnotationState {
       transaction.doc
     )
     return this
+  }
+
+  // helpers for relative position
+  absToRel(state: EditorState, abs: number): Y.RelativePosition {
+    const ystate = ySyncPluginKey.getState(state)
+    const { type, binding } = ystate
+    if (!ystate.binding) {
+      throw new Error('Y.State non initialized')
+    }
+    return absolutePositionToRelativePosition(abs, type, binding.mapping)
   }
 }

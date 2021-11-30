@@ -1,15 +1,15 @@
 // @ts-ignore
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
 import { Extension } from '@tiptap/core'
-import { findParentNodeClosestToPos } from 'prosemirror-utils'
 import * as Y from 'yjs'
 
 import { createAnnotationPlugin, AnnotationPluginKey } from './AnnotationPlugin'
 
 export interface AddAnnotationAction {
   type: 'addAnnotation'
-  data: any
+  id: string
   pos: number
+  data?: any
 }
 
 export interface CreateDecorationsAction {
@@ -63,7 +63,7 @@ export interface AnnotationOptions {
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     annotation: {
-      addAnnotation: (data: any) => ReturnType
+      addAnnotation: (params: AddAnnotationParams) => ReturnType
       updateAnnotation: (id: string, data: any) => ReturnType
       deleteAnnotation: (id: string) => ReturnType
       clearAnnotations: () => ReturnType
@@ -71,6 +71,12 @@ declare module '@tiptap/core' {
       moveAnnotations: (toMove: MoveInstruction[]) => ReturnType
     }
   }
+}
+
+type AddAnnotationParams = {
+  id: string
+  pos: number
+  data?: any
 }
 
 const getMap = (doc: any) => doc.getMap('annotations') as Y.Map<any>
@@ -138,37 +144,14 @@ export const AnnotationExtension = Extension.create({
           return true
         },
       addAnnotation:
-        (data: any) =>
-        ({ dispatch, state }) => {
-          const { selection } = state
-          const blockParent = findParentNodeClosestToPos(
-            this.editor.state.doc.resolve(selection.from),
-            (node) => node.type.isBlock
-          )
-
-          if (!blockParent) {
-            return false
-          }
-          const { pos } = blockParent
-
-          if (dispatch && data) {
-            state.tr.setMeta(AnnotationPluginKey, <AddAnnotationAction>{
-              type: 'addAnnotation',
-              pos,
-              data,
-            })
-          }
-
-          return true
-        },
-      updateAnnotation:
-        (id: string, data: any) =>
+        ({ pos, id, data }: AddAnnotationParams) =>
         ({ dispatch, state }) => {
           if (dispatch) {
-            state.tr.setMeta(AnnotationPluginKey, <UpdateAnnotationAction>{
-              type: 'updateAnnotation',
+            state.tr.setMeta(AnnotationPluginKey, <AddAnnotationAction>{
+              type: 'addAnnotation',
               id,
               data,
+              pos,
             })
           }
 

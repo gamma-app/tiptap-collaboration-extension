@@ -1,16 +1,17 @@
-import { Plugin, PluginKey } from "prosemirror-state";
-import * as Y from "yjs";
+import { Plugin, PluginKey } from 'prosemirror-state'
+import { Decoration, DecorationSet } from 'prosemirror-view'
+import * as Y from 'yjs'
 
-import { AnnotationItem } from "./AnnotationItem";
-import { AnnotationState } from "./AnnotationState";
+import { AnnotationItem } from './AnnotationItem'
+import { AnnotationState } from './AnnotationState'
 
-export const AnnotationPluginKey = new PluginKey("annotation");
+export const AnnotationPluginKey = new PluginKey('annotation')
 
 export interface AnnotationPluginOptions {
-  onUpdate: (items: any[], items2: any[]) => void;
-  map: Y.Map<any>;
-  instance: string;
-  color: string;
+  onUpdate: (items: any[], items2: any[]) => void
+  map: Y.Map<any>
+  instance: string
+  color: string
 }
 
 export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
@@ -23,24 +24,25 @@ export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
           map: options.map,
           instance: options.instance,
           color: options.color,
-        });
+        })
       },
 
       apply(transaction, pluginState, oldEditorState, newEditorState) {
-        return pluginState.apply(transaction, newEditorState);
+        return pluginState.apply(transaction, newEditorState)
       },
     },
 
     props: {
       decorations(state) {
-        const { decorations, annotations } = this.getState(state);
+        const { decorations, annotations } = this.getState(state) as any
 
+        console.log('deco props', decorations.find())
         options.onUpdate(
           decorations.find().map((d) => new AnnotationItem(d)),
           annotations
-        );
+        )
 
-        return decorations;
+        return decorations
       },
     },
-  });
+  })
