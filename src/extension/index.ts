@@ -1,5 +1,5 @@
-import { AnnotationExtension } from "./extension";
+import { AnnotationExtension } from './extension'
 
-export * from "./extension";
+export * from './extension'
 
-export default AnnotationExtension;
+export default AnnotationExtension

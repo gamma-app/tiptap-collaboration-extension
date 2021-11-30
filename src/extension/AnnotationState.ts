@@ -1,106 +1,109 @@
-import * as Y from "yjs";
-import { EditorState, Transaction } from "prosemirror-state";
-import { findChildren } from "prosemirror-utils";
-import { Decoration, DecorationSet } from "prosemirror-view";
+import { EditorState, Transaction } from 'prosemirror-state'
+import { findChildren } from 'prosemirror-utils'
+import { Decoration, DecorationSet } from 'prosemirror-view'
 import {
   ySyncPluginKey,
   relativePositionToAbsolutePosition,
   absolutePositionToRelativePosition,
-} from "y-prosemirror";
+} from 'y-prosemirror'
+import * as Y from 'yjs'
+
+import { AnnotationPluginKey } from './AnnotationPlugin'
 import {
   AddAnnotationAction,
   ClearAnnotationsAction,
   DeleteAnnotationAction,
   UpdateAnnotationAction,
-} from "./extension";
-import { AnnotationPluginKey } from "./AnnotationPlugin";
-import { CreateDecorationsAction, MoveAnnotationsAction } from ".";
+} from './extension'
+
+import { CreateDecorationsAction, MoveAnnotationsAction } from '.'
 
 export interface AnnotationStateOptions {
-  map: Y.Map<any>;
-  instance: string;
-  color: string;
+  map: Y.Map<any>
+  instance: string
+  color: string
 }
 
 export type AnnotationData = {
-  data: string;
-  id: string;
-  relativePos: Y.RelativePosition;
-};
+  data: string
+  id: string
+  relativePos: Y.RelativePosition
+}
 
 export class AnnotationState {
-  options: AnnotationStateOptions;
+  options: AnnotationStateOptions
 
-  decorations = DecorationSet.empty;
+  decorations = DecorationSet.empty
 
-  annotations: AnnotationData[] = [];
+  annotations: AnnotationData[] = []
 
-  color: string;
+  color: string
 
   constructor(options: AnnotationStateOptions) {
-    this.options = options;
-    this.color = options.color;
+    this.options = options
+    this.color = options.color
   }
 
   randomId() {
     // TODO: That seems … to simple.
-    return Math.floor(Math.random() * 0xffffffff).toString();
+    return Math.floor(Math.random() * 0xffffffff).toString()
   }
 
   findAnnotation(key: string) {
-    const current = this.decorations.find();
+    const current = this.decorations.find()
 
     for (let i = 0; i < current.length; i += 1) {
       if (current[i].spec.key === key) {
-        return current[i];
+        return current[i]
       }
     }
   }
 
   clearAnnotations(action: ClearAnnotationsAction, state: EditorState) {
-    const ystate = ySyncPluginKey.getState(state);
+    const ystate = ySyncPluginKey.getState(state)
     if (!ystate.binding) {
-      return this;
+      return this
     }
-    this.options.map.clear();
+    // TODO fix this
+    // this.options.map.clear()
   }
 
   addAnnotation(action: AddAnnotationAction, state: EditorState) {
-    const { map } = this.options;
-    const { pos, data } = action;
-    const relativePos = this.absToRel(state, pos);
-    const randomId = this.randomId();
+    const { map } = this.options
+    const { pos, data } = action
+    const relativePos = this.absToRel(state, pos)
+    const randomId = this.randomId()
     map.set(randomId, {
       pos: relativePos,
       data,
-    });
+    })
   }
 
   updateAnnotation(action: UpdateAnnotationAction) {
-    const { map } = this.options;
+    const { map } = this.options
 
-    const annotation = map.get(action.id);
+    const annotation = map.get(action.id)
 
     map.set(action.id, {
       from: annotation.from,
       data: action.data,
-    });
+    })
   }
 
   deleteAnnotation(id: string) {
-    const { map } = this.options;
+    const { map } = this.options
 
-    map.delete(id);
+    map.delete(id)
   }
 
   // helpers for relative position
   absToRel(state: EditorState, abs: number): Y.RelativePosition {
-    const ystate = ySyncPluginKey.getState(state);
-    const { type, binding } = ystate;
+    const ystate = ySyncPluginKey.getState(state)
+    const { type, binding } = ystate
     if (!ystate.binding) {
-      throw new Error("Y.State non initialized");
+      throw new Error('Y.State non initialized')
     }
-    return absolutePositionToRelativePosition(abs, type, binding.mapping);
+    return absolutePositionToRelativePosition(abs, type, binding.mapping)
   }
 
   moveAnnotation(state: EditorState, id: string, newPos: number) {
@@ -111,26 +114,26 @@ export class AnnotationState {
         id,
         newPos,
       }
-    );
+    )
     // update decoration position
-    const { map } = this.options;
-    const existing = map.get(id);
+    const { map } = this.options
+    const existing = map.get(id)
     map.set(id, {
       ...existing,
       pos: this.absToRel(state, newPos),
-    });
-    return this;
+    })
+    return this
   }
 
   createDecorations(state: EditorState) {
-    const { map } = this.options;
-    const ystate = ySyncPluginKey.getState(state);
+    const { map } = this.options
+    const ystate = ySyncPluginKey.getState(state)
     if (!ystate.binding) {
-      return this;
+      return this
     }
-    const { doc, type, binding } = ystate;
-    const decorations: Decoration[] = [];
-    const annotations: AnnotationData[] = [];
+    const { doc, type, binding } = ystate
+    const decorations: Decoration[] = []
+    const annotations: AnnotationData[] = []
 
     map.forEach((annotation, key) => {
       const pos = relativePositionToAbsolutePosition(
@@ -138,27 +141,27 @@ export class AnnotationState {
         type,
         annotation.pos,
         binding.mapping
-      );
+      )
 
       if (!pos) {
-        return;
+        return
       }
 
-      const node = state.doc.resolve(pos);
+      const node = state.doc.resolve(pos)
       const getPos = (curr) => {
-        const results = findChildren(state.doc, (node) => node === curr);
+        const results = findChildren(state.doc, (node) => node === curr)
         if (!results) {
-          throw new Error();
+          throw new Error()
         }
-        return results[0].pos;
-      };
+        return results[0].pos
+      }
 
-      const start = node.nodeAfter?.isBlock ? pos : getPos(node.parent);
+      const start = node.nodeAfter?.isBlock ? pos : getPos(node.parent)
       const end =
         start +
         (node.nodeAfter?.isBlock
           ? node.nodeAfter.nodeSize
-          : node.parent.nodeSize);
+          : node.parent.nodeSize)
 
       console.log(
         `%c[${this.options.instance}] creating decoration`,
@@ -169,13 +172,13 @@ export class AnnotationState {
           start,
           end,
         }
-      );
+      )
 
       annotations.push({
         id: key,
         data: annotation.data,
         relativePos: annotation.pos,
-      });
+      })
       decorations.push(
         Decoration.node(
           start,
@@ -187,19 +190,19 @@ export class AnnotationState {
             data: annotation.data,
             pos,
             destroy(node) {
-              console.log("DESTROYED!", node);
+              console.log('DESTROYED!', node)
             },
           }
         )
-      );
-    });
+      )
+    })
 
-    this.decorations = DecorationSet.create(state.doc, decorations);
-    this.annotations = annotations;
-    return this;
+    this.decorations = DecorationSet.create(state.doc, decorations)
+    this.annotations = annotations
+    return this
   }
 
-  apply(transaction: Transaction, state: EditorState, oldState: EditorState) {
+  apply(transaction: Transaction, state: EditorState) {
     // Add/Remove annotations
     const action = transaction.getMeta(AnnotationPluginKey) as
       | AddAnnotationAction
@@ -207,44 +210,46 @@ export class AnnotationState {
       | ClearAnnotationsAction
       | MoveAnnotationsAction
       | CreateDecorationsAction
-      | DeleteAnnotationAction;
+      | DeleteAnnotationAction
 
     if (action && action.type) {
-      if (action.type === "addAnnotation") {
-        this.addAnnotation(action, state);
+      if (action.type === 'addAnnotation') {
+        this.addAnnotation(action, state)
       }
 
-      if (action.type === "clearAnnotations") {
-        this.clearAnnotations(action, state);
+      if (action.type === 'clearAnnotations') {
+        this.clearAnnotations(action, state)
       }
 
-      if (action.type === "updateAnnotation") {
-        this.updateAnnotation(action);
+      if (action.type === 'updateAnnotation') {
+        this.updateAnnotation(action)
       }
 
-      if (action.type === "deleteAnnotation") {
-        this.deleteAnnotation(action.id);
+      if (action.type === 'deleteAnnotation') {
+        this.deleteAnnotation(action.id)
       }
 
-      if (action.type === "createDecorations") {
+      if (action.type === 'createDecorations') {
         // since we can't do batch updates to a Y.Map swallow errors
         // with the hope that things are "eventually right"
         try {
-          this.createDecorations(state);
-        } catch (e) {}
+          this.createDecorations(state)
+        } catch (e) {
+          // swallow
+        }
       }
 
-      if (action.type === "moveAnnotations") {
+      if (action.type === 'moveAnnotations') {
         action.toMove.forEach((data) => {
-          this.moveAnnotation(state, data.id, data.newPos);
-        });
+          this.moveAnnotation(state, data.id, data.newPos)
+        })
       }
 
-      return this;
+      return this
     }
 
     // Use Y.js to update positions
-    const ystate = ySyncPluginKey.getState(state);
+    const ystate = ySyncPluginKey.getState(state)
 
     // always re-render decorations for remote changes
     if (ystate.isChangeOrigin) {
@@ -252,33 +257,35 @@ export class AnnotationState {
         `%c[${this.options.instance}] remote change`,
         `color: ${this.color}`,
         { transaction: transaction }
-      );
+      )
       // createDecoration may fail in the case of a remote update from
       // a special case like <enter>, <backspace> or <delete>
       // swallow and expect that a correction to the annotation ymap is incoming
       try {
-        this.createDecorations(state);
-      } catch (e) {}
-      return this;
+        this.createDecorations(state)
+      } catch (e) {
+        // swallow
+      }
+      return this
     }
 
     // LOCAL CHANGE
-    return this.handleLocalChange(transaction, state);
+    return this.handleLocalChange(transaction)
   }
 
-  handleLocalChange(transaction: Transaction, state: EditorState): this {
-    const splitBlockAtStart = transaction.getMeta("SPLIT_BLOCK_START");
-    const joinBlock = transaction.getMeta("JOIN_BLOCK");
+  handleLocalChange(transaction: Transaction): this {
+    const splitBlockAtStart = transaction.getMeta('SPLIT_BLOCK_START')
+    const joinBlock = transaction.getMeta('JOIN_BLOCK')
 
     if (joinBlock || splitBlockAtStart) {
-      return this;
+      return this
     }
 
     // no special cases, allow decoration mapping to happen
     this.decorations = this.decorations.map(
       transaction.mapping,
       transaction.doc
-    );
-    return this;
+    )
+    return this
   }
 }

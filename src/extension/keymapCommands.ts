@@ -1,48 +1,60 @@
-import { Command, findChildren } from "@tiptap/core";
-import { EditorState } from "prosemirror-state";
-import { Node } from "prosemirror-model";
-import { AnnotationPluginKey } from "./AnnotationPlugin";
-import { AnnotationState } from "./AnnotationState";
-import { MoveInstruction } from ".";
+import { Command, findChildren } from '@tiptap/core'
+import { Node } from 'prosemirror-model'
+import { EditorState } from 'prosemirror-state'
 import {
   ySyncPluginKey,
   relativePositionToAbsolutePosition,
-} from "y-prosemirror";
-import { RelativePosition } from "yjs";
+} from 'y-prosemirror'
+import { RelativePosition } from 'yjs'
+
+import { AnnotationPluginKey } from './AnnotationPlugin'
+import { AnnotationState } from './AnnotationState'
+
+import { MoveInstruction } from '.'
 
 const getPos = (doc: any, curr: Node) => {
-  const results = findChildren(doc, (node) => node === curr);
+  const results = findChildren(doc, (node) => node === curr)
   if (!results) {
-    throw new Error();
+    throw new Error()
   }
-  return results[0]?.pos;
-};
+  return results[0]?.pos
+}
 
 const getAnnotationState = (state: EditorState): AnnotationState => {
-  return AnnotationPluginKey.getState(state) as AnnotationState;
-};
+  return AnnotationPluginKey.getState(state) as AnnotationState
+}
 
-const toAbsPosition = (state: EditorState, pos: RelativePosition) => {
-  const ystate = ySyncPluginKey.getState(state);
+const toAbsPosition = (state: EditorState, pos: RelativePosition): number => {
+  const ystate = ySyncPluginKey.getState(state)
   if (!ystate.binding) {
-    return this;
+    return -1
   }
-  const { doc, type, binding } = ystate;
-  return relativePositionToAbsolutePosition(doc, type, pos, binding.mapping);
-};
+  const { doc, type, binding } = ystate
+  const result = relativePositionToAbsolutePosition(
+    doc,
+    type,
+    pos,
+    binding.mapping
+  )
+
+  if (typeof result !== 'number') {
+    throw new Error('Invalid absolute position')
+  }
+  return result
+}
 
 // helper function to create comparator
 const relativePosEq =
   (state: EditorState, match: number) =>
   ({ relativePos }: { relativePos: RelativePosition }) =>
-    toAbsPosition(state, relativePos) === match;
+    toAbsPosition(state, relativePos) === match
 
 const relativePosBetween =
   (state: EditorState, start: number, end: number) =>
   ({ relativePos }: { relativePos: RelativePosition }) => {
-    const pos = toAbsPosition(state, relativePos);
-    return pos > start && pos < end;
-  };
+    const pos = toAbsPosition(state, relativePos) || -1
+    return pos > start && pos < end
+  }
 
 export const splitBlockWithAnnotations: Command = ({
   tr,
@@ -55,39 +67,39 @@ export const splitBlockWithAnnotations: Command = ({
   // (i.e. moving the entire block),
   // mark the transaction so that the annotation
   // decoration can be moved with it
-  const beforeBlockFrom = tr.selection.$from.pos;
-  const beforeBlock = tr.selection.$from.parent;
-  const beforeBlockPos = getPos(state.doc, beforeBlock);
+  const beforeBlockFrom = tr.selection.$from.pos
+  const beforeBlock = tr.selection.$from.parent
+  const beforeBlockPos = getPos(state.doc, beforeBlock)
 
   // handle split block at beginning of line
-  if (view.endOfTextblock("backward")) {
-    const result = commands.splitBlock();
+  if (view.endOfTextblock('backward')) {
+    const result = commands.splitBlock()
     if (result) {
-      tr.setMeta("SPLIT_BLOCK_START", {});
+      tr.setMeta('SPLIT_BLOCK_START', {})
       requestAnimationFrame(() => {
-        editor.commands.refreshDecorations();
-      });
+        editor.commands.refreshDecorations()
+      })
     }
-    return result;
+    return result
   }
 
   // get original unsplit block info
-  const origBlock = tr.selection.$from.parent;
-  const origBlockPos = getPos(state.doc, origBlock);
-  const origBlockEnd = origBlockPos + origBlock.nodeSize;
+  const origBlock = tr.selection.$from.parent
+  const origBlockPos = getPos(state.doc, origBlock)
+  const origBlockEnd = origBlockPos + origBlock.nodeSize
 
-  const result = commands.splitBlock();
+  const result = commands.splitBlock()
 
   // new block (2nd block) info
-  const newBlock = tr.selection.$from.parent;
-  const newBlockPos = getPos(state.doc, newBlock);
+  const newBlock = tr.selection.$from.parent
+  const newBlockPos = getPos(state.doc, newBlock)
 
   if (result) {
     // set SPLIT_BLOCK_START so that the AnnotationState special cases
-    tr.setMeta("SPLIT_BLOCK_START", {});
+    tr.setMeta('SPLIT_BLOCK_START', {})
 
     // How far did the split move us
-    console.log("handling enter", {
+    console.log('handling enter', {
       origBlock,
       origBlockPos,
       origBlockEnd,
@@ -96,9 +108,9 @@ export const splitBlockWithAnnotations: Command = ({
       beforeBlockPos,
       newBlockPos,
       newBlock,
-    });
+    })
 
-    const { annotations } = getAnnotationState(state);
+    const { annotations } = getAnnotationState(state)
 
     // <prev block> <next block>
     const frontBlockAnnotations = annotations
@@ -107,8 +119,8 @@ export const splitBlockWithAnnotations: Command = ({
         return {
           id,
           newPos: newBlockPos,
-        };
-      });
+        }
+      })
 
     const middleBlockAnnotations = annotations
       // TODO should memoize relative position stuff
@@ -120,25 +132,25 @@ export const splitBlockWithAnnotations: Command = ({
           newPos:
             newBlockPos +
             (toAbsPosition(state, relativePos) - beforeBlockFrom + 1),
-        };
-      });
+        }
+      })
 
     const annotationsToMove = [
       ...frontBlockAnnotations,
       ...middleBlockAnnotations,
-    ];
+    ]
     if (annotationsToMove.length > 0) {
       requestAnimationFrame(() => {
-        editor.commands.moveAnnotations(annotationsToMove);
-      });
+        editor.commands.moveAnnotations(annotationsToMove)
+      })
     } else {
       requestAnimationFrame(() => {
-        editor.commands.refreshDecorations();
-      });
+        editor.commands.refreshDecorations()
+      })
     }
   }
-  return result;
-};
+  return result
+}
 
 export const joinBackwardWithAnnotations: Command = ({
   tr,
@@ -147,36 +159,36 @@ export const joinBackwardWithAnnotations: Command = ({
   state,
   view,
 }) => {
-  if (!view.endOfTextblock("backward")) {
-    return false;
+  if (!view.endOfTextblock('backward')) {
+    return false
   }
   // delete backspace position
-  const currentBlockPos = tr.selection.$from.before();
-  const origBlock = tr.selection.$from.parent;
-  const origBlockPos = getPos(state.doc, origBlock);
-  const origBlockEnd = origBlockPos + origBlock.nodeSize;
+  const currentBlockPos = tr.selection.$from.before()
+  const origBlock = tr.selection.$from.parent
+  const origBlockPos = getPos(state.doc, origBlock)
+  const origBlockEnd = origBlockPos + origBlock.nodeSize
 
   // do join
-  const joinBackward = commands.joinBackward();
+  const joinBackward = commands.joinBackward()
 
   // joinBackward is true if a backspace resulted in a join block
   if (joinBackward) {
-    const newBlockFrom = tr.selection.$from.pos;
+    const newBlockFrom = tr.selection.$from.pos
 
-    console.log("handling backspace", {
+    console.log('handling backspace', {
       currentBlockPos,
       origBlock,
       origBlockPos,
       origBlockEnd,
-    });
+    })
 
     // currentBlockPos and orignBlockPos will be the same when the backspace
     // is happening at the front of a block
 
     // where the decoration should be
-    const newDecorationPos = tr.selection.$from.pos;
+    const newDecorationPos = tr.selection.$from.pos
 
-    const { annotations } = getAnnotationState(state);
+    const { annotations } = getAnnotationState(state)
     // handle join backwards block where annotation is at front
     // <p>block 1</p>
     // <p>|block 2</p>
@@ -188,8 +200,8 @@ export const joinBackwardWithAnnotations: Command = ({
         return {
           id,
           newPos: newDecorationPos,
-        };
-      });
+        }
+      })
 
     // handle join backwards block where annotation in middle of block
     // <p>block 1</p>
@@ -203,29 +215,29 @@ export const joinBackwardWithAnnotations: Command = ({
       .map<MoveInstruction>(({ relativePos, id }) => {
         // middle offset is from `origBlock` start to pos
         // does not count the inclusive origBlock.pos
-        const pos = toAbsPosition(state, relativePos);
-        const middleOffset = pos - (origBlockPos + 1); // +1 to denote the from, not the pos
+        const pos = toAbsPosition(state, relativePos)
+        const middleOffset = pos - (origBlockPos + 1) // +1 to denote the from, not the pos
         return {
           id,
           newPos: newBlockFrom + middleOffset,
-        };
-      });
-    const toMove = [...frontBlockAnnotations, ...middleBlockAnnotations];
+        }
+      })
+    const toMove = [...frontBlockAnnotations, ...middleBlockAnnotations]
 
     // TODO account for when some move and some dont
     // maybe the map.observe handle this okay
     if (toMove.length > 0) {
       requestAnimationFrame(() => {
-        editor.commands.moveAnnotations(toMove);
-      });
+        editor.commands.moveAnnotations(toMove)
+      })
     } else {
       requestAnimationFrame(() => {
-        editor.commands.refreshDecorations();
-      });
+        editor.commands.refreshDecorations()
+      })
     }
   }
-  return joinBackward;
-};
+  return joinBackward
+}
 
 export const joinForwardWithAnnotations: Command = ({
   tr,
@@ -234,8 +246,8 @@ export const joinForwardWithAnnotations: Command = ({
   state,
   view,
 }) => {
-  if (!view.endOfTextblock("forward")) {
-    return false;
+  if (!view.endOfTextblock('forward')) {
+    return false
   }
   //   delete pressed here
   //           |
@@ -245,27 +257,27 @@ export const joinForwardWithAnnotations: Command = ({
   //
   // RESULT:
   // <p>block 1block 2</p> joinedBlock
-  const currentBlockFrom = tr.selection.$from.pos;
-  const nextBlockPos = tr.selection.$from.after();
-  const nextBlock = state.doc.resolve(nextBlockPos).nodeAfter;
-  const nextBlockEnd = nextBlockPos + nextBlock.nodeSize;
-  const origBlock = tr.selection.$from.parent;
-  const origBlockPos = getPos(state.doc, origBlock);
+  const currentBlockFrom = tr.selection.$from.pos
+  const nextBlockPos = tr.selection.$from.after()
+  const nextBlock = state.doc.resolve(nextBlockPos).nodeAfter
+  const nextBlockEnd = nextBlock ? nextBlockPos + nextBlock.nodeSize : -1 // TODO theres something better to do
+  const origBlock = tr.selection.$from.parent
+  const origBlockPos = getPos(state.doc, origBlock)
   // do join
-  const joinForward = commands.joinForward();
+  const joinForward = commands.joinForward()
 
   if (joinForward) {
     // use tr.doc becuase it reflects the new doc structure after commands.joinForward()
-    console.log("handling delete", {
+    console.log('handling delete', {
       currentBlockFrom,
       nextBlock,
       nextBlockPos,
       nextBlockEnd,
       origBlockPos,
       origBlock,
-    });
+    })
 
-    const { annotations } = getAnnotationState(state);
+    const { annotations } = getAnnotationState(state)
     // handle join forward block where annotation is at front
     //     currentBlockFrom
     //           |
@@ -281,8 +293,8 @@ export const joinForwardWithAnnotations: Command = ({
         return {
           id,
           newPos: currentBlockFrom,
-        };
-      });
+        }
+      })
 
     // handle join backwards block where annotation in middle of block
     //
@@ -299,24 +311,24 @@ export const joinForwardWithAnnotations: Command = ({
       .map<MoveInstruction>(({ relativePos, id }) => {
         // middle offset is from `origBlock` start to pos
         // does not count the inclusive origBlock.pos
-        const pos = toAbsPosition(state, relativePos);
-        const middleOffset = pos - (nextBlockPos + 1); // +1 to denote the from, not the pos
+        const pos = toAbsPosition(state, relativePos)
+        const middleOffset = pos - (nextBlockPos + 1) // +1 to denote the from, not the pos
         return {
           id,
           newPos: currentBlockFrom + middleOffset,
-        };
-      });
-    const toMove = [...frontBlockAnnotations, ...middleBlockAnnotations];
+        }
+      })
+    const toMove = [...frontBlockAnnotations, ...middleBlockAnnotations]
 
     if (toMove.length > 0) {
       requestAnimationFrame(() => {
-        editor.commands.moveAnnotations(toMove);
-      });
+        editor.commands.moveAnnotations(toMove)
+      })
     } else {
       requestAnimationFrame(() => {
-        editor.commands.refreshDecorations();
-      });
+        editor.commands.refreshDecorations()
+      })
     }
   }
-  return joinForward;
-};
+  return joinForward
+}
