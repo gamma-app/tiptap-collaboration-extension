@@ -26,6 +26,7 @@ export interface AnnotationStateOptions {
 export type AnnotationData = {
   data: string
   id: string
+  pos: number
   start: number
   end: number
   relativePos: Y.RelativePosition
@@ -147,6 +148,7 @@ export class AnnotationState {
         id: key,
         data: annotation.data,
         relativePos: annotation.pos,
+        pos,
         start,
         end,
       })
