@@ -18,6 +18,7 @@ import {
 import { CreateDecorationsAction, MoveAnnotationsAction } from '.'
 
 export interface AnnotationStateOptions {
+  document: Y.Doc
   map: Y.Map<any>
   instance: string
   color: string
@@ -86,12 +87,15 @@ export class AnnotationState {
       }
     )
     // update decoration position
-    const { map } = this.options
+    const { map, document } = this.options
     const existing = map.get(id)
-    map.set(id, {
-      ...existing,
-      pos: this.absToRel(state, newPos),
-    })
+    this.options.document.transact(() => {
+      console.log('jordan move annotation!!!')
+      map.set(id, {
+        ...existing,
+        pos: this.absToRel(state, newPos),
+      })
+    }, ySyncPluginKey)
     return this
   }
 

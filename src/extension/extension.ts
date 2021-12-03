@@ -1,7 +1,9 @@
 // @ts-ignore
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
 import { Extension } from '@tiptap/core'
+import { yUndoPluginKey } from 'y-prosemirror'
 import * as Y from 'yjs'
+import { YMap } from 'yjs/dist/src/internals'
 
 import { createAnnotationPlugin, AnnotationPluginKey } from './AnnotationPlugin'
 
@@ -94,6 +96,34 @@ export const AnnotationExtension = Extension.create({
   } as AnnotationOptions,
 
   onCreate() {
+    console.log('jordan on create')
+    const undoManager: Y.UndoManager = yUndoPluginKey.getState(
+      this.editor.state
+    ).undoManager
+
+    undoManager.on('stack-item-added', (event) => {
+      AnnotationPluginKey.getState(this.editor.state)
+      // save the current cursor location on the stack-item
+      const map = getMap(this.options.document)
+      console.log('jordan saving', map.toJSON())
+      event.stackItem.meta.set('annotations', map.toJSON())
+    })
+
+    undoManager.on('stack-item-popped', (event) => {
+      // restore the current cursor location on the stack-item
+
+      const map = event.stackItem.meta.get('annotations') as YMap<any>
+      console.log('jordan got back map', map)
+      if (!map) {
+        return
+      }
+      // console.log('jordan RESTORING', map.toJSON())
+      const thismap = getMap(this.options.document)
+      for (const [key, value] of Object.entries(map)) {
+        thismap!.set(key, value)
+      }
+    })
+
     getMap(this.options.document).observe(() => {
       console.log(
         `%c[${this.options.instance}] map.observe updated → dispatching createDecorations`,
@@ -172,9 +202,11 @@ export const AnnotationExtension = Extension.create({
   },
 
   addProseMirrorPlugins() {
+    console.log('jordan add plugin')
     return [
       createAnnotationPlugin({
         onUpdate: this.options.onUpdate,
+        document: this.options.document,
         map: getMap(this.options.document),
         instance: this.options.instance,
         color: this.options.color,

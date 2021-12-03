@@ -3,6 +3,7 @@ import { customAlphabet } from 'nanoid'
 // @ts-ignore
 import applyDevTools from 'prosemirror-dev-tools'
 import { useEffect, useState } from 'react'
+import { yUndoPluginKey } from 'y-prosemirror'
 
 import { useTestEditor } from './useTestEditor'
 
@@ -44,10 +45,13 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
       setSelection(editor.state.selection)
     })
     async function doit() {
+      // @ts-ignore
+      window.undoManager = yUndoPluginKey.getState(editor!.state).undoManager
+
       // return;
       editor?.commands.clearAnnotations()
       await sleep()
-      editor?.commands.setTextSelection(14)
+      editor?.commands.setTextSelection(11)
       await sleep()
       editor?.commands.addAnnotation({
         pos: 14,
@@ -55,7 +59,7 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
         data: 'c1',
       })
       await sleep()
-      editor?.commands.setTextSelection(25)
+      editor?.commands.setTextSelection(22)
       await sleep()
       editor?.commands.addAnnotation({
         pos: 25,

@@ -4,23 +4,18 @@ import * as Y from 'yjs'
 
 import { AnnotationItem } from './AnnotationItem'
 import { AnnotationState } from './AnnotationState'
+import { AnnotationPluginParams } from './types'
 
 export const AnnotationPluginKey = new PluginKey('annotation')
 
-export interface AnnotationPluginOptions {
-  onUpdate: (items: any[], items2: any[]) => void
-  map: Y.Map<any>
-  instance: string
-  color: string
-}
-
-export const createAnnotationPlugin = (options: AnnotationPluginOptions) =>
+export const createAnnotationPlugin = (options: AnnotationPluginParams) =>
   new Plugin({
     key: AnnotationPluginKey,
 
     state: {
       init() {
         return new AnnotationState({
+          document: options.document,
           map: options.map,
           instance: options.instance,
           color: options.color,

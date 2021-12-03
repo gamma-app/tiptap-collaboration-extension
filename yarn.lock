@@ -1950,7 +1950,7 @@ __metadata:
     web-vitals: ^1.0.1
     webpack-cli: ^4.9.1
     y-protocols: 1.0.5
-    yjs: 13.5.16
+    yjs: ^13.5.22
   languageName: unknown
   linkType: soft
 
@@ -10781,7 +10781,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lib0@npm:^0.2.42":
+"lib0@npm:^0.2.42, lib0@npm:^0.2.43":
   version: 0.2.43
   resolution: "lib0@npm:0.2.43"
   dependencies:
@@ -17590,12 +17590,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"yjs@npm:13.5.16":
-  version: 13.5.16
-  resolution: "yjs@npm:13.5.16"
+"yjs@npm:^13.5.22":
+  version: 13.5.22
+  resolution: "yjs@npm:13.5.22"
   dependencies:
-    lib0: ^0.2.42
-  checksum: 9adf0a24b921814c8406654649b83f24e18b7abad023ffa738977145e6edffb288cd86cd8abd37977f15b23165da28540ba5c7a75f8fa17cd0ccff6003bce584
+    lib0: ^0.2.43
+  checksum: ca8003d5782875042c780308e501ea00c84a31c87e13d0b0e1f4f93b0455eb7e01af38da55a95658d1640c9888143964ce1b507340453f391ff6ac0038935b9f
   languageName: node
   linkType: hard
 

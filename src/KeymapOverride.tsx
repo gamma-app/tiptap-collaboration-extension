@@ -1,6 +1,6 @@
 import { Extension } from '@tiptap/core'
 
-import * as keymapCommands from './keymapCommands'
+import * as keymapCommands from './extension/keymapCommands'
 
 export const KeymapOverride = Extension.create({
   name: 'keymapOverride',

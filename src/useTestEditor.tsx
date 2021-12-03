@@ -1,15 +1,16 @@
-import { useEditor } from '@tiptap/react'
-import Document from '@tiptap/extension-document'
-import * as Y from 'yjs'
-import { Paragraph } from './Paragraph'
-import Text from '@tiptap/extension-text'
-import Collaboration from '@tiptap/extension-collaboration'
 import Bold from '@tiptap/extension-bold'
+import Collaboration from '@tiptap/extension-collaboration'
+import Document from '@tiptap/extension-document'
 import Heading from '@tiptap/extension-heading'
-import AnnotationExtension from './extension'
-import { KeymapOverride } from './extension/KeymapOverride'
-// @ts-ignore
+import Text from '@tiptap/extension-text'
+import { useEditor } from '@tiptap/react'
 import applyDevTools from 'prosemirror-dev-tools'
+import * as Y from 'yjs'
+
+import AnnotationExtension from './extension'
+import { KeymapOverride } from './KeymapOverride'
+import { Paragraph } from './Paragraph'
+// @ts-ignore
 
 export const useTestEditor = ({
   ydoc,
