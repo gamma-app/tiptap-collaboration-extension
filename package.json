@@ -21,6 +21,7 @@
     "@types/react": "^17.0.0",
     "@types/react-dom": "^17.0.0",
     "core-js": "3.18.3",
+    "lodash": "^4.17.21",
     "nanoid": "^3.1.30",
     "prosemirror-dev-tools": "^3.1.0",
     "prosemirror-tables": "1.1.1",

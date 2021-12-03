@@ -14,6 +14,7 @@ import {
   AnnotationData,
   AnnotationPluginParams,
   AnnotationActions,
+  AnnotationStateYMap,
 } from './types'
 
 export class AnnotationState {
@@ -21,26 +22,23 @@ export class AnnotationState {
 
   public annotations: AnnotationData[] = []
 
-  constructor(protected options: AnnotationPluginParams) {}
+  public map: AnnotationStateYMap
 
-  clearAnnotations(state: EditorState) {
-    const ystate = ySyncPluginKey.getState(state)
-    if (!ystate.binding) {
-      return this
-    }
-    // TODO fix this
-    // @ts-ignore
-    this.options.map.forEach((val, key) => {
-      this.options.map.delete(key)
+  constructor(protected options: AnnotationPluginParams) {
+    this.map = options.map
+  }
+
+  clearAnnotations() {
+    this.map.forEach((_val, key) => {
+      this.map.delete(key)
     })
     return this
   }
 
   addAnnotation(action: AddAnnotationAction, state: EditorState) {
-    const { map } = this.options
     const { pos, id, data } = action
     const relativePos = this.absToRel(state, pos)
-    map.set(id, {
+    this.map.set(id, {
       id,
       pos: relativePos,
       data,
@@ -48,9 +46,7 @@ export class AnnotationState {
   }
 
   deleteAnnotation(id: string) {
-    const { map } = this.options
-
-    map.delete(id)
+    this.map.delete(id)
   }
 
   moveAnnotation(state: EditorState, id: string, newPos: number) {
@@ -63,7 +59,7 @@ export class AnnotationState {
       }
     )
     // update decoration position
-    const { map } = this.options
+    const { map } = this
     const existing = map.get(id)
     if (!existing) {
       throw new Error(`No YMap annotations entry for ${id}`)
@@ -162,7 +158,7 @@ export class AnnotationState {
       }
 
       if (action.type === 'clearAnnotations') {
-        this.clearAnnotations(state)
+        this.clearAnnotations()
       }
 
       if (action.type === 'deleteAnnotation') {
@@ -231,5 +227,16 @@ export class AnnotationState {
       throw new Error('Y.State non initialized')
     }
     return absolutePositionToRelativePosition(abs, type, binding.mapping)
+  }
+
+  serialize() {
+    return this.map.toJSON()
+  }
+
+  restore(json: Record<string, any>) {
+    this.clearAnnotations()
+    for (const [key, val] of Object.entries(json)) {
+      this.map.set(key, val)
+    }
   }
 }

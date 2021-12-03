@@ -1,10 +1,12 @@
 // @ts-ignore
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
 import { Extension } from '@tiptap/core'
+import debounce from 'lodash/debounce'
 import { yUndoPluginKey } from 'y-prosemirror'
 import * as Y from 'yjs'
 
 import { createAnnotationPlugin, AnnotationPluginKey } from './AnnotationPlugin'
+import { AnnotationState } from './AnnotationState'
 import {
   MoveInstruction,
   AnnotationOptions,
@@ -48,34 +50,34 @@ export const AnnotationExtension = Extension.create({
       this.editor.state
     ).undoManager
 
+    const annotationState: AnnotationState = AnnotationPluginKey.getState(
+      this.editor.state
+    )
+
     undoManager.on('stack-item-added', (event) => {
-      AnnotationPluginKey.getState(this.editor.state)
-      // save the current cursor location on the stack-item
-      const map = getMap(this.options.document)
-      console.log('jordan saving', map.toJSON())
-      event.stackItem.meta.set('annotations', map.toJSON())
+      const serialized = annotationState.serialize()
+      console.log('jordan saving', serialized)
+      event.stackItem.meta.set('annotations', serialized)
     })
 
     undoManager.on('stack-item-popped', (event) => {
-      const map = event.stackItem.meta.get('annotations') as Y.Map<any>
-      console.log('jordan got back map', map)
-      if (!map) {
+      const serialized = event.stackItem.meta.get('annotations') as Y.Map<any>
+      if (!serialized) {
         return
       }
-
-      const thismap = getMap(this.options.document)
-      for (const [key, value] of Object.entries(map)) {
-        thismap!.set(key, value)
-      }
+      annotationState.restore(serialized)
     })
-    getMap(this.options.document).observe(() => {
-      console.log(
-        `%c[${this.options.instance}] map.observe updated → dispatching createDecorations`,
-        `color: ${this.options.color}`
-      )
 
-      this.editor.commands.refreshDecorations()
-    })
+    getMap(this.options.document).observe(
+      debounce(() => {
+        console.log(
+          `%c[${this.options.instance}] jordan map.observe updated → dispatching createDecorations`,
+          `color: ${this.options.color}`
+        )
+
+        this.editor.commands.refreshDecorations()
+      })
+    )
   },
 
   addCommands() {
