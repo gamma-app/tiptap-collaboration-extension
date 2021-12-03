@@ -32,7 +32,6 @@ export class AnnotationState {
     this.map.forEach((_val, key) => {
       this.map.delete(key)
     })
-    return this
   }
 
   addAnnotation(action: AddAnnotationAction, state: EditorState) {
@@ -69,14 +68,13 @@ export class AnnotationState {
       ...existing,
       pos: this.absToRel(state, newPos),
     })
-    return this
   }
 
   createDecorations(state: EditorState) {
     const { map } = this.options
     const ystate = ySyncPluginKey.getState(state)
     if (!ystate.binding) {
-      return this
+      return
     }
     const { doc, type, binding } = ystate
     const decorations: Decoration[] = []
@@ -145,10 +143,9 @@ export class AnnotationState {
 
     this.decorations = DecorationSet.create(state.doc, decorations)
     this.annotations = annotations
-    return this
   }
 
-  apply(transaction: Transaction, state: EditorState) {
+  apply(transaction: Transaction, state: EditorState): this {
     // Add/Remove annotations
     const action = transaction.getMeta(AnnotationPluginKey) as AnnotationActions
 

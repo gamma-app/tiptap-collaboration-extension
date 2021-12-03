@@ -1,4 +1,3 @@
-// @ts-ignore
 /* eslint-disable @typescript-eslint/consistent-type-assertions */
 import { Extension } from '@tiptap/core'
 import debounce from 'lodash/debounce'
@@ -68,7 +67,7 @@ export const AnnotationExtension = Extension.create({
       annotationState.restore(serialized)
     })
 
-    getMap(this.options.document).observe(
+    annotationState.map.observe(
       debounce(() => {
         console.log(
           `%c[${this.options.instance}] jordan map.observe updated → dispatching createDecorations`,
