@@ -11,43 +11,19 @@ import * as Y from 'yjs'
 import { AnnotationPluginKey } from './AnnotationPlugin'
 import {
   AddAnnotationAction,
-  ClearAnnotationsAction,
-  DeleteAnnotationAction,
-} from './extension'
-
-import { CreateDecorationsAction, MoveAnnotationsAction } from '.'
-
-export interface AnnotationStateOptions {
-  document: Y.Doc
-  map: Y.Map<any>
-  instance: string
-  color: string
-}
-
-export type AnnotationData = {
-  data: string
-  id: string
-  pos: number
-  start: number
-  end: number
-  relativePos: Y.RelativePosition
-}
+  AnnotationData,
+  AnnotationPluginParams,
+  AnnotationActions,
+} from './types'
 
 export class AnnotationState {
-  options: AnnotationStateOptions
+  public decorations = DecorationSet.empty
 
-  decorations = DecorationSet.empty
+  public annotations: AnnotationData[] = []
 
-  annotations: AnnotationData[] = []
+  constructor(protected options: AnnotationPluginParams) {}
 
-  color: string
-
-  constructor(options: AnnotationStateOptions) {
-    this.options = options
-    this.color = options.color
-  }
-
-  clearAnnotations(action: ClearAnnotationsAction, state: EditorState) {
+  clearAnnotations(state: EditorState) {
     const ystate = ySyncPluginKey.getState(state)
     if (!ystate.binding) {
       return this
@@ -80,22 +56,23 @@ export class AnnotationState {
   moveAnnotation(state: EditorState, id: string, newPos: number) {
     console.log(
       `%c[${this.options.instance}] move annotation`,
-      `color: ${this.color}`,
+      `color: ${this.options.color}`,
       {
         id,
         newPos,
       }
     )
     // update decoration position
-    const { map, document } = this.options
+    const { map } = this.options
     const existing = map.get(id)
-    this.options.document.transact(() => {
-      console.log('jordan move annotation!!!')
-      map.set(id, {
-        ...existing,
-        pos: this.absToRel(state, newPos),
-      })
-    }, ySyncPluginKey)
+    if (!existing) {
+      throw new Error(`No YMap annotations entry for ${id}`)
+    }
+
+    map.set(id, {
+      ...existing,
+      pos: this.absToRel(state, newPos),
+    })
     return this
   }
 
@@ -117,7 +94,7 @@ export class AnnotationState {
         binding.mapping
       )
 
-      if (!pos) {
+      if (pos == null) {
         return
       }
 
@@ -139,7 +116,7 @@ export class AnnotationState {
 
       console.log(
         `%c[${this.options.instance}] creating decoration`,
-        `color: ${this.color}`,
+        `color: ${this.options.color}`,
         {
           pos,
           data: annotation.data,
@@ -153,8 +130,6 @@ export class AnnotationState {
         data: annotation.data,
         relativePos: annotation.pos,
         pos,
-        start,
-        end,
       })
       decorations.push(
         Decoration.node(
@@ -179,12 +154,7 @@ export class AnnotationState {
 
   apply(transaction: Transaction, state: EditorState) {
     // Add/Remove annotations
-    const action = transaction.getMeta(AnnotationPluginKey) as
-      | AddAnnotationAction
-      | ClearAnnotationsAction
-      | MoveAnnotationsAction
-      | CreateDecorationsAction
-      | DeleteAnnotationAction
+    const action = transaction.getMeta(AnnotationPluginKey) as AnnotationActions
 
     if (action && action.type) {
       if (action.type === 'addAnnotation') {
@@ -192,14 +162,14 @@ export class AnnotationState {
       }
 
       if (action.type === 'clearAnnotations') {
-        this.clearAnnotations(action, state)
+        this.clearAnnotations(state)
       }
 
       if (action.type === 'deleteAnnotation') {
         this.deleteAnnotation(action.id)
       }
 
-      if (action.type === 'createDecorations') {
+      if (action.type === 'refreshAnnotationDecorations') {
         // since we can't do batch updates to a Y.Map swallow errors
         // with the hope that things are "eventually right"
         try {
@@ -226,7 +196,7 @@ export class AnnotationState {
     if (ystate.isChangeOrigin) {
       console.log(
         `%c[${this.options.instance}] remote change`,
-        `color: ${this.color}`,
+        `color: ${this.options.color}`,
         { transaction: transaction }
       )
       // createDecoration may fail in the case of a remote update from
@@ -246,14 +216,6 @@ export class AnnotationState {
   }
 
   handleLocalChange(transaction: Transaction): this {
-    const splitBlockAtStart = transaction.getMeta('SPLIT_BLOCK_START')
-    const joinBlock = transaction.getMeta('JOIN_BLOCK')
-
-    if (joinBlock || splitBlockAtStart) {
-      return this
-    }
-
-    // no special cases, allow decoration mapping to happen
     this.decorations = this.decorations.map(
       transaction.mapping,
       transaction.doc

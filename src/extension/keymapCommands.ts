@@ -9,10 +9,9 @@ import { RelativePosition } from 'yjs'
 
 import { AnnotationPluginKey } from './AnnotationPlugin'
 import { AnnotationState } from './AnnotationState'
+import { MoveInstruction } from './types'
 
-import { MoveInstruction } from '.'
-
-const getPos = (doc: any, curr: Node) => {
+const getPos = (doc: Node, curr: Node) => {
   const results = findChildren(doc, (node) => node === curr)
   if (!results) {
     throw new Error()
@@ -75,7 +74,6 @@ export const splitBlockWithAnnotations: Command = ({
   if (view.endOfTextblock('backward')) {
     const result = commands.splitBlock()
     if (result) {
-      tr.setMeta('SPLIT_BLOCK_START', {})
       requestAnimationFrame(() => {
         editor.commands.refreshDecorations()
       })
@@ -95,9 +93,6 @@ export const splitBlockWithAnnotations: Command = ({
   const newBlockPos = getPos(state.doc, newBlock)
 
   if (result) {
-    // set SPLIT_BLOCK_START so that the AnnotationState special cases
-    tr.setMeta('SPLIT_BLOCK_START', {})
-
     // How far did the split move us
     console.log('handling enter', {
       origBlock,
@@ -224,9 +219,8 @@ export const joinBackwardWithAnnotations: Command = ({
       })
     const toMove = [...frontBlockAnnotations, ...middleBlockAnnotations]
 
-    // TODO account for when some move and some dont
-    // maybe the map.observe handle this okay
-    if (toMove.length > 0) {
+    // Don't move annotation when backspacing on empty block
+    if (origBlock.textContent !== '' && toMove.length > 0) {
       requestAnimationFrame(() => {
         editor.commands.moveAnnotations(toMove)
       })

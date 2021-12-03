@@ -72,7 +72,7 @@ export type AnnotationStateYMap = Y.Map<{
   pos: Y.RelativePosition
 }>
 
-export type AnnotationPluginParams = AnnotationOptions & {
+export type AnnotationPluginParams = Omit<AnnotationOptions, 'document'> & {
   map: AnnotationStateYMap
 }
 

@@ -1,6 +1,4 @@
 import { Plugin, PluginKey } from 'prosemirror-state'
-import { Decoration, DecorationSet } from 'prosemirror-view'
-import * as Y from 'yjs'
 
 import { AnnotationItem } from './AnnotationItem'
 import { AnnotationState } from './AnnotationState'
@@ -14,12 +12,7 @@ export const createAnnotationPlugin = (options: AnnotationPluginParams) =>
 
     state: {
       init() {
-        return new AnnotationState({
-          document: options.document,
-          map: options.map,
-          instance: options.instance,
-          color: options.color,
-        })
+        return new AnnotationState(options)
       },
 
       apply(transaction, pluginState, oldEditorState, newEditorState) {
@@ -29,9 +22,10 @@ export const createAnnotationPlugin = (options: AnnotationPluginParams) =>
 
     props: {
       decorations(state) {
-        const { decorations, annotations } = this.getState(state) as any
+        const { decorations, annotations } = this.getState(
+          state
+        ) as AnnotationState
 
-        console.log('deco props', decorations.find())
         options.onUpdate(
           decorations.find().map((d) => new AnnotationItem(d)),
           annotations
