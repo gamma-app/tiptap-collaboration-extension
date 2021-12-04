@@ -1,7 +1,8 @@
 import './styles.css'
-import { Tiptap } from './Tiptap'
-import * as Y from 'yjs'
 import { EditorView } from 'prosemirror-view'
+import * as Y from 'yjs'
+
+import { Tiptap } from './Tiptap'
 
 EditorView.prototype.updateState = function updateState(state) {
   if (!this.docView) return // This prevents the matchesNode error on hot reloads
@@ -21,10 +22,10 @@ export default function App() {
           color="magenta"
         />
       </div>
-      <div className="bottom">
+      {/* <div className="bottom">
         <h3>editor2 </h3>
         <Tiptap ydoc={ydoc} instance={'editor2'} color="cornflowerblue" />
-      </div>
+      </div> */}
     </div>
   )
 }

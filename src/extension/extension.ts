@@ -12,7 +12,9 @@ import {
   AddAnnotationAction,
   DeleteAnnotationAction,
   AnnotationStateYMap,
+  AnnotationStateEntry,
 } from './types'
+import { reverseOps, UndoOperation } from './UndoableYMap'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -53,16 +55,30 @@ export const AnnotationExtension = Extension.create({
       this.editor.state
     )
 
-    undoManager.on('stack-item-added', (event) => {
-      const serialized = annotationState.serialize()
-      console.log('jordan saving', serialized)
-      event.stackItem.meta.set('annotations', serialized)
-    })
-
     undoManager.on('stack-item-popped', (event) => {
-      const serialized = event.stackItem.meta.get('annotations') as Y.Map<any>
+      const serialized = event.stackItem.meta.get('annotations') as
+        | UndoOperation<AnnotationStateEntry>[]
+        | undefined
+
       if (!serialized) {
         return
+      }
+
+      const { undoStack, redoStack } = undoManager
+
+      // an undo happened add info to redo stack
+      if (event.type === 'undo' && redoStack.length > 0) {
+        redoStack[redoStack.length - 1].meta.set(
+          'annotations',
+          reverseOps(serialized)
+        )
+      }
+      // an redo happened, add info to undo stack
+      else if (event.type === 'redo' && undoStack.length > 0) {
+        undoStack[undoStack.length - 1].meta.set(
+          'annotations',
+          reverseOps(serialized)
+        )
       }
       annotationState.restore(serialized)
     })
@@ -70,7 +86,7 @@ export const AnnotationExtension = Extension.create({
     annotationState.map.observe(
       debounce(() => {
         console.log(
-          `%c[${this.options.instance}] jordan map.observe updated → dispatching createDecorations`,
+          `%c[${this.options.instance}] map.observe updated → dispatching createDecorations`,
           `color: ${this.options.color}`
         )
 

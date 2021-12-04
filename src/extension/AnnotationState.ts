@@ -2,6 +2,7 @@ import { EditorState, Transaction } from 'prosemirror-state'
 import { findChildren } from 'prosemirror-utils'
 import { Decoration, DecorationSet } from 'prosemirror-view'
 import {
+  yUndoPluginKey,
   ySyncPluginKey,
   relativePositionToAbsolutePosition,
   absolutePositionToRelativePosition,
@@ -15,7 +16,9 @@ import {
   AnnotationPluginParams,
   AnnotationActions,
   AnnotationStateYMap,
+  AnnotationStateEntry,
 } from './types'
+import { UndoableYMapWrapper, UndoOperation } from './UndoableYMap'
 
 export class AnnotationState {
   public decorations = DecorationSet.empty
@@ -24,8 +27,11 @@ export class AnnotationState {
 
   public map: AnnotationStateYMap
 
+  public undoableMap: UndoableYMapWrapper<AnnotationStateEntry>
+
   constructor(protected options: AnnotationPluginParams) {
     this.map = options.map
+    this.undoableMap = new UndoableYMapWrapper<AnnotationStateEntry>(this.map)
   }
 
   clearAnnotations() {
@@ -35,6 +41,10 @@ export class AnnotationState {
   }
 
   addAnnotation(action: AddAnnotationAction, state: EditorState) {
+    console.log(
+      `%c[${this.options.instance}] addAnnotation`,
+      `color: ${this.options.color}`
+    )
     const { pos, id, data } = action
     const relativePos = this.absToRel(state, pos)
     this.map.set(id, {
@@ -45,6 +55,10 @@ export class AnnotationState {
   }
 
   deleteAnnotation(id: string) {
+    console.log(
+      `%c[${this.options.instance}] deleteAnnotation`,
+      `color: ${this.options.color}`
+    )
     this.map.delete(id)
   }
 
@@ -64,10 +78,23 @@ export class AnnotationState {
       throw new Error(`No YMap annotations entry for ${id}`)
     }
 
-    map.set(id, {
+    this.undoableMap.set(id, {
       ...existing,
       pos: this.absToRel(state, newPos),
     })
+
+    // NOTE(jordan): this is kind of hacky for this plugin state to reach into
+    // another plugin, but it seems to be the simplest way
+    const undoManager: Y.UndoManager =
+      yUndoPluginKey.getState(state).undoManager
+
+    if (undoManager.undoStack.length > 0) {
+      const serialized = this.undoableMap.flushUndoQueue()
+      undoManager.undoStack[undoManager.undoStack.length - 1].meta.set(
+        'annotations',
+        serialized
+      )
+    }
   }
 
   createDecorations(state: EditorState) {
@@ -198,7 +225,7 @@ export class AnnotationState {
       try {
         this.createDecorations(state)
       } catch (e) {
-        console.log(`could not create decorations: ${e.message}`, e)
+        console.log(`could not create decorations: ${e.message}`)
         // swallow
       }
       return this
@@ -227,13 +254,17 @@ export class AnnotationState {
   }
 
   serialize() {
-    return this.map.toJSON()
+    return this.undoableMap.flushUndoQueue()
   }
 
-  restore(json: Record<string, any>) {
-    this.clearAnnotations()
-    for (const [key, val] of Object.entries(json)) {
-      this.map.set(key, val)
-    }
+  restore(queue: UndoOperation<AnnotationStateEntry>[]) {
+    queue.forEach((op) => {
+      const { next, key } = op
+      if (next === undefined) {
+        this.map.delete(key)
+      } else {
+        this.map.set(key, next)
+      }
+    })
   }
 }

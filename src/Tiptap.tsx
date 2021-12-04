@@ -45,27 +45,15 @@ export const Tiptap = ({ ydoc, instance, devTools = false, color }) => {
       setSelection(editor.state.selection)
     })
     async function doit() {
-      // @ts-ignore
-      window.undoManager = yUndoPluginKey.getState(editor!.state).undoManager
-
       // return;
       editor?.commands.clearAnnotations()
       await sleep()
-      editor?.commands.setTextSelection(11)
-      await sleep()
       editor?.commands.addAnnotation({
-        pos: 14,
+        pos: 12,
         id: commentNanoid(),
         data: 'c1',
       })
       await sleep()
-      editor?.commands.setTextSelection(22)
-      await sleep()
-      editor?.commands.addAnnotation({
-        pos: 25,
-        id: commentNanoid(),
-        data: 'c2',
-      })
       return
     }
     setTimeout(() => doit(), 500)

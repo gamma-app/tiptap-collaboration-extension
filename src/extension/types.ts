@@ -66,11 +66,13 @@ export type AnnotationData = {
   pos: number
 }
 
-export type AnnotationStateYMap = Y.Map<{
+export type AnnotationStateYMap = Y.Map<AnnotationStateEntry>
+
+export type AnnotationStateEntry = {
   id: string
   data: any
   pos: Y.RelativePosition
-}>
+}
 
 export type AnnotationPluginParams = Omit<AnnotationOptions, 'document'> & {
   map: AnnotationStateYMap
